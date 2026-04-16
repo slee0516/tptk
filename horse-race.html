@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>🐎 무적의 야생마 🐎</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d1b2a;
+  color: #eee;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 20px 40px;
+}
+
+.layout {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1280px;
+}
+
+canvas {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 14px;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.7);
+}
+
+/* ── 사이드바 ── */
+.sidebar {
+  flex: 1;
+  min-width: 260px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+h1 {
+  font-size: 1.5em;
+  letter-spacing: 2px;
+  color: #f4c430;
+  line-height: 1.35;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#startBtn {
+  padding: 12px 0;
+  font-size: 1.05em;
+  font-weight: bold;
+  letter-spacing: 3px;
+  background: #e63946;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s, transform 0.1s;
+}
+#startBtn:hover:not(:disabled) { background: #c1121f; }
+#startBtn:active { transform: scale(0.97); }
+#startBtn:disabled { background: #444; cursor: default; letter-spacing: 2px; }
+
+#statusMsg {
+  font-size: 0.82em;
+  color: #7a8fa6;
+  text-align: center;
+  min-height: 16px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #1e3050;
+  margin: 2px 0;
+}
+
+/* ── 사이드 패널 (순위 현황 / 결과) ── */
+#panel h3 {
+  font-size: 0.95em;
+  color: #f4c430;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rank-row {
+  background: #162032;
+  border: 1px solid #1e3050;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+}
+.rank-row.done { opacity: 0.6; }
+
+.rank-pos {
+  font-size: 0.82em;
+  font-weight: bold;
+  color: #8899aa;
+  min-width: 26px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.rank-pos.gold   { color: #f1c40f; }
+.rank-pos.silver { color: #bdc3c7; }
+.rank-pos.bronze { color: #cd7f32; }
+
+.horse-dot {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.3);
+}
+
+.horse-label {
+  font-size: 0.84em;
+  color: #ccd;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progress bar (live view) */
+.pbar-wrap {
+  width: 44px;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pbar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* Final result medals */
+.rank-medal {
+  font-size: 1.25em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.waiting-msg {
+  font-size: 0.82em;
+  color: #4a6070;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.finish-msg {
+  text-align: center;
+  margin-top: 8px;
+  color: #f4c430;
+  font-size: 0.88em;
+  letter-spacing: 1px;
+}
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.row-animate { animation: rowIn 0.25s ease; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <canvas id="canvas"></canvas>
+
+  <div class="sidebar">
+    <h1>🐎 무적의 야생마 🐎</h1>
+
+    <div class="controls">
+      <button id="startBtn">▶ START</button>
+      <span id="statusMsg"></span>
+    </div>
+
+    <hr class="divider">
+
+    <div id="panel">
+      <p class="waiting-msg">START를 눌러 레이스를 시작하세요</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  Constants
+// ══════════════════════════════════════════
+const W = 920, H = 590;
+const NUM = 12;
+const CX = W / 2, CY = H / 2;
+
+const LS     = 380;
+const BASE_R = 95;
+const STEP_R = 12;
+
+function laneR(i) { return BASE_R + i * STEP_R; }
+
+const INNER_R = BASE_R - STEP_R - 4;
+const OUTER_R = laneR(NUM - 1) + STEP_R + 6;
+
+const HORSE_SCALE = 0.72;  // canvas units per path unit
+
+// Track colors
+const COLOR_BG_GRASS  = '#40996e';   // outer grass (same as inner)
+const COLOR_DIRT      = '#c49552';   // sandy dirt track
+const COLOR_INNER     = '#40996e';   // inner grass
+
+const HORSE_NAMES = [
+  '정환 말','장우 말','사랑 말','솔지 말',
+  '지영 말','승훈 말','가희 말','나현 말',
+  '수연 말','승균 말','서영 말','소연 말'
+];
+
+const COLORS = [
+  '#e63946','#457b9d','#2dc653','#f4a261',
+  '#a8dadc','#e9c46a','#e76f51','#b5838d',
+  '#48cae4','#80b918','#f77f00','#9b5de5'
+];
+
+// ══════════════════════════════════════════
+//  State
+// ══════════════════════════════════════════
+let horses    = [];
+let results   = [];
+let running   = false;
+let animId    = null;
+let frameCount = 0;
+
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+canvas.width  = W;
+canvas.height = H;
+
+// ══════════════════════════════════════════
+//  Track path (rounded rectangle)
+// ══════════════════════════════════════════
+function trackPath(r) {
+  ctx.beginPath();
+  ctx.moveTo(CX - LS / 2, CY - r);
+  ctx.lineTo(CX + LS / 2, CY - r);
+  ctx.arc(CX + LS / 2, CY, r, -Math.PI / 2,  Math.PI / 2, false);
+  ctx.lineTo(CX - LS / 2, CY + r);
+  ctx.arc(CX - LS / 2, CY, r,  Math.PI / 2, -Math.PI / 2, false);
+  ctx.closePath();
+}
+
+// ══════════════════════════════════════════
+//  Horse position + tangent direction
+// ══════════════════════════════════════════
+function getPos(horse) {
+  const r = laneR(horse.lane);
+  const P = 2 * LS + 2 * Math.PI * r;
+  const s = horse.progress * P;
+
+  const s1 = LS / 2;
+  const s2 = s1 + Math.PI * r;
+  const s3 = s2 + LS;
+  const s4 = s3 + Math.PI * r;
+
+  let x, y;
+  if (s <= s1) {
+    x = CX - s;
+    y = CY + r;
+  } else if (s <= s2) {
+    const a = Math.PI / 2 + (s - s1) / r;
+    x = (CX - LS / 2) + r * Math.cos(a);
+    y = CY + r * Math.sin(a);
+  } else if (s <= s3) {
+    x = (CX - LS / 2) + (s - s2);
+    y = CY - r;
+  } else if (s <= s4) {
+    const a = -Math.PI / 2 + (s - s3) / r;
+    x = (CX + LS / 2) + r * Math.cos(a);
+    y = CY + r * Math.sin(a);
+  } else {
+    x = (CX + LS / 2) - (s - s4);
+    y = CY + r;
+  }
+  return { x, y };
+}
+
+// Tangent angle of travel at current progress
+// (angle = 0 → facing right, angle = π → facing left)
+function getTangent(horse) {
+  const r = laneR(horse.lane);
+  const P = 2 * LS + 2 * Math.PI * r;
+  const s = horse.progress * P;
+
+  const s1 = LS / 2;
+  const s2 = s1 + Math.PI * r;
+  const s3 = s2 + LS;
+  const s4 = s3 + Math.PI * r;
+
+  if (s <= s1 || s > s4) {
+    return Math.PI;   // bottom straight → going left
+  } else if (s <= s2) {
+    const a = Math.PI / 2 + (s - s1) / r;
+    return Math.atan2(Math.cos(a), -Math.sin(a)); // left curve
+  } else if (s <= s3) {
+    return 0;          // top straight → going right
+  } else {
+    const a = -Math.PI / 2 + (s - s3) / r;
+    return Math.atan2(Math.cos(a), -Math.sin(a)); // right curve
+  }
+}
+
+// ══════════════════════════════════════════
+//  Init
+// ══════════════════════════════════════════
+function initHorses() {
+  results    = [];
+  frameCount = 0;
+  horses     = HORSE_NAMES.map((name, i) => ({
+    id: i, name, color: COLORS[i],
+    lane: i, progress: 0, finished: false, rank: null,
+    animPhase: Math.random() * Math.PI * 2,  // randomise stride start
+    lastSpeed: 0.0007,                        // smoothed speed for animation
+  }));
+}
+
+// ══════════════════════════════════════════
+//  Draw (canvas)
+// ══════════════════════════════════════════
+function drawBg() {
+  ctx.fillStyle = COLOR_BG_GRASS;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawTrack() {
+  trackPath(OUTER_R);
+  ctx.fillStyle = COLOR_DIRT;
+  ctx.fill();
+
+  trackPath(INNER_R);
+  ctx.fillStyle = COLOR_INNER;
+  ctx.fill();
+
+  for (let i = 0; i <= NUM; i++) {
+    trackPath(BASE_R + i * STEP_R - STEP_R / 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  trackPath(OUTER_R);
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawFinishLine() {
+  const yTop = CY + INNER_R + 1;
+  const yBot = CY + OUTER_R - 1;
+  const sw   = 11;
+  const fw   = 14;
+  const nx   = Math.ceil((yBot - yTop) / sw);
+
+  for (let i = 0; i < nx; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#111111';
+    ctx.fillRect(CX - fw / 2, yTop + i * sw, fw, Math.min(sw, yBot - yTop - i * sw));
+  }
+
+  ctx.save();
+  ctx.translate(CX - fw / 2 - 7, (yTop + yBot) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('START / FINISH', 0, 0);
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Horse rendering — animated gallop silhouette
+// ════════════════════════════════════════════════════════════════════
+
+// Darken a hex colour by fraction 0–1
+function darken(hex, t) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, ((n >> 16) & 0xff) * (1 - t)) | 0;
+  const g = Math.max(0, ((n >>  8) & 0xff) * (1 - t)) | 0;
+  const b = Math.max(0, ( n        & 0xff) * (1 - t)) | 0;
+  return `rgb(${r},${g},${b})`;
+}
+
+// Draw one 2-segment leg with a knee bend.
+// (ox, oy) = shoulder/hip attach point in the current (scaled) ctx.
+// angle  = swing angle from vertical: negative = forward, positive = back.
+// isFront = true → knee bends forward; false → knee bends back.
+// w = stroke width.
+function drawLeg(ox, oy, angle, len, isFront, w, col) {
+  const ulLen = len * 0.54;
+  const llLen = len * 0.46;
+
+  // Dynamic knee: bends more when the leg is at peak forward swing
+  const dynKnee = isFront ? Math.max(0, -angle) * 0.55 : Math.max(0, angle) * 0.35;
+  const kneeDelta = isFront ? (-0.28 - dynKnee) : (0.32 + dynKnee);
+
+  const kx = Math.sin(angle) * ulLen;
+  const ky = Math.cos(angle) * ulLen;
+  const la = angle + kneeDelta;
+  const lx = kx + Math.sin(la) * llLen;
+  const ly = ky + Math.cos(la) * llLen;
+
+  ctx.save();
+  ctx.translate(ox, oy);
+  ctx.strokeStyle = col;
+  ctx.lineWidth   = w;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(kx, ky);
+  ctx.lineTo(lx, ly);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Corner banking angle (smooth ramp at curve entry/exit).
+function cornerTilt(horse) {
+  const r  = laneR(horse.lane);
+  const P  = 2 * LS + 2 * Math.PI * r;
+  const s  = horse.progress * P;
+  const s1 = LS / 2, s2 = s1 + Math.PI * r;
+  const s3 = s2 + LS, s4 = s3 + Math.PI * r;
+
+  const MAX  = 0.13;   // radians (~7.5°)
+  const RAMP = 28;     // arc-length units for fade-in / fade-out
+  const smooth = t => t * t * (3 - 2 * t);
+
+  if (s > s1 && s < s2) {
+    const t = smooth(Math.min((s - s1) / RAMP, (s2 - s) / RAMP, 1));
+    return  MAX * t;   // left curve → lean right (clockwise)
+  }
+  if (s > s3 && s < s4) {
+    const t = smooth(Math.min((s - s3) / RAMP, (s4 - s) / RAMP, 1));
+    return -MAX * t;   // right curve → lean left (counterclockwise)
+  }
+  return 0;
+}
+
+// ── Main horse draw ──────────────────────────────────────────────────────────
+function drawHorse(h) {
+  const { x, y } = getPos(h);
+  const tangent   = getTangent(h);
+  const goingLeft = Math.cos(tangent) < 0;
+
+  const bodyCol = h.finished ? '#3a4a4a' : h.color;
+  const legCol  = h.finished ? '#2a3636' : darken(h.color, 0.28);
+  const maneCol = h.finished ? '#2a3a3a' : darken(h.color, 0.35);
+
+  // ── Vertical bob (up-down bounce tied to stride) ──
+  const bob = h.finished ? 0 : Math.sin(h.animPhase * 2) * 2.2;
+
+  // ── Gallop leg angles ──
+  // Near-pair (front-near & back-near) and far-pair (front-far & back-far)
+  // swing opposite each other; back legs lag front by ~0.65 rad.
+  const SWING  = 0.50;    // peak swing amplitude (radians)
+  const BACKLAG = 0.65;   // phase lag of back legs relative to front
+  const fnA =  Math.sin(h.animPhase)                        * SWING; // front-near
+  const ffA =  Math.sin(h.animPhase + Math.PI)              * SWING; // front-far
+  const bnA =  Math.sin(h.animPhase + Math.PI + BACKLAG)    * SWING; // back-near
+  const bfA =  Math.sin(h.animPhase          + BACKLAG)     * SWING; // back-far
+
+  const tilt = cornerTilt(h);
+
+  // ── Ground shadow ──
+  ctx.save();
+  ctx.translate(x, y + 10 * HORSE_SCALE);
+  ctx.scale(1, 0.28);
+  ctx.beginPath();
+  ctx.arc(0, 0, 14 * HORSE_SCALE, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fill();
+  ctx.restore();
+
+  // ── Draw everything in one transformed context ──
+  ctx.save();
+  ctx.translate(x, y + bob);
+  ctx.rotate(tilt);                       // banking on corners (world-space)
+  if (goingLeft) ctx.scale(-1, 1);        // mirror for direction
+  ctx.scale(HORSE_SCALE, HORSE_SCALE);
+
+  // 1. Far (background) legs — dimmed for depth
+  ctx.globalAlpha = 0.55;
+  drawLeg( 5, 5, ffA, 17, true,  2.2, legCol);  // front-far
+  drawLeg(-7, 5, bfA, 17, false, 2.2, legCol);  // back-far
+  ctx.globalAlpha = 1;
+
+  // 2. Body silhouette
+  ctx.fillStyle = bodyCol;
+  ctx.beginPath();
+  ctx.moveTo(8, 0);                              // chest / neck-base
+  ctx.bezierCurveTo(10, -5, 14, -8, 17, -9);    // neck (forward-angled)
+  ctx.bezierCurveTo(20, -10, 22, -8, 23, -5);   // head crest
+  ctx.bezierCurveTo(24, -2, 23,  2, 21,  3);    // nose area
+  ctx.bezierCurveTo(18,  4, 15,  2, 13,  1);    // chin / jaw
+  ctx.bezierCurveTo(11,  0,  9,  1,  8,  2);    // throat
+  ctx.bezierCurveTo( 8,  5, 10,  8, 10,  8);    // chest lower
+  ctx.bezierCurveTo( 5,  8,  0,  8, -4,  7);    // belly front
+  ctx.bezierCurveTo(-8,  7,-11,  5,-12,  2);    // belly → rump
+  ctx.bezierCurveTo(-13, 0,-12, -4,-10, -5);    // rump
+  ctx.bezierCurveTo(-7, -7, -2, -8,  2, -8);    // lower back
+  ctx.bezierCurveTo( 5, -8,  7, -6,  9, -4);    // withers
+  ctx.lineTo(8, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Ear
+  ctx.beginPath();
+  ctx.moveTo(16, -9);
+  ctx.lineTo(17, -13);
+  ctx.lineTo(20, -9);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(-11,  0);
+  ctx.bezierCurveTo(-16, -6, -20, -5, -18,  1);
+  ctx.bezierCurveTo(-16,  6, -11,  5, -11,  3);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mane (darker ridge along neck)
+  ctx.fillStyle = maneCol;
+  ctx.beginPath();
+  ctx.moveTo(10, -5);
+  ctx.bezierCurveTo(12, -11, 17, -13, 20, -10);
+  ctx.bezierCurveTo(18, -11, 13, -10, 10, -5);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Near (foreground) legs — on top of body
+  drawLeg( 7, 5, fnA, 17, true,  3.0, legCol);  // front-near
+  drawLeg(-5, 5, bnA, 17, false, 3.0, legCol);  // back-near
+
+  // 4. Coloured number badge (always readable — unscale before drawing)
+  ctx.restore();  // ← pop the HORSE_SCALE / flip
+
+  // Badge in canvas-pixel coordinates
+  const BADGE = 9;
+  const bx = x + (goingLeft ? -12 : 12);
+  const by = y + bob - 13;
+  ctx.beginPath();
+  ctx.arc(bx, by, BADGE, 0, Math.PI * 2);
+  ctx.fillStyle   = h.finished ? '#222' : h.color;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+  ctx.fillStyle    = h.finished ? '#666' : '#fff';
+  ctx.font         = `bold ${h.id >= 9 ? 6 : 7.5}px Arial`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(h.id + 1, bx, by);
+  return;  // early return — ctx.restore() already called above
+}
+// (no extra ctx.restore needed — see drawHorse)
+
+function render() {
+  drawBg();
+  drawTrack();
+  drawFinishLine();
+  for (let i = NUM - 1; i >= 0; i--) drawHorse(horses[i]);
+}
+
+// ══════════════════════════════════════════
+//  Sidebar panel (live standings → final)
+// ══════════════════════════════════════════
+const MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' };
+const MEDAL_CLS = { 1: 'gold', 2: 'silver', 3: 'bronze' };
+
+function sortedHorses() {
+  return [...horses].sort((a, b) => {
+    if (a.finished && b.finished) return a.rank - b.rank;
+    if (a.finished)  return -1;
+    if (b.finished)  return  1;
+    return b.progress - a.progress;
+  });
+}
+
+function renderPanel() {
+  const panel = document.getElementById('panel');
+  const allDone = results.length === NUM;
+  const sorted  = sortedHorses();
+
+  let html = allDone
+    ? '<h3>🏁 최종 결과</h3>'
+    : '<h3>🏇 순위 현황</h3>';
+
+  html += '<div class="rank-list">';
+
+  sorted.forEach((h, pos) => {
+    const rank = h.finished ? h.rank : pos + 1;
+
+    // Rank badge
+    let badge;
+    if (allDone && MEDALS[rank]) {
+      badge = `<span class="rank-medal">${MEDALS[rank]}</span>`;
+    } else {
+      const cls = MEDAL_CLS[rank] || '';
+      badge = `<span class="rank-pos ${cls}">${rank}위</span>`;
+    }
+
+    // Progress bar (only during race, hide when all done)
+    const pct = Math.min(100, Math.round(h.progress * 100));
+    const pbar = allDone ? '' : `
+      <div class="pbar-wrap">
+        <div class="pbar-fill" style="width:${pct}%;background:${h.color}88"></div>
+      </div>`;
+
+    const doneClass = h.finished && !allDone ? ' done' : '';
+
+    html += `
+      <div class="rank-row${doneClass}">
+        ${badge}
+        <div class="horse-dot" style="background:${h.color}"></div>
+        <div class="horse-label">${h.name}</div>
+        ${pbar}
+      </div>`;
+  });
+
+  html += '</div>';
+
+  if (allDone) {
+    html += '<p class="finish-msg">🎉 모두가 완주했습니다!</p>';
+  }
+
+  panel.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+//  Update
+// ══════════════════════════════════════════
+function update() {
+  let newFinish = false;
+
+  for (const h of horses) {
+    if (h.finished) continue;
+
+    const base    = 0.00042;
+    const noise   = (Math.random() - 0.32) * 0.0018;
+    const burst   = Math.random() < 0.04  ? Math.random() * 0.003  : 0;
+    const stumble = Math.random() < 0.025 ? -(0.0004 + Math.random() * 0.0005) : 0;
+    const speed   = Math.max(0.00008, base + noise + burst + stumble);
+
+    const prev    = h.progress;
+    h.progress    = Math.min(1, h.progress + speed);
+
+    // Smooth speed & advance leg animation phase (faster speed = faster stride)
+    h.lastSpeed  = h.lastSpeed * 0.85 + speed * 0.15;
+    h.animPhase  = (h.animPhase + h.lastSpeed * 520) % (Math.PI * 2);
+
+    if (h.progress >= 1 && !h.finished) {
+      h.finished = true;
+      h.rank     = results.length + 1;
+      results.push(h);
+      newFinish  = true;
+    }
+  }
+
+  frameCount++;
+
+  // Refresh panel: always on new finish, otherwise every 8 frames
+  if (newFinish || frameCount % 8 === 0) renderPanel();
+
+  if (results.length === NUM) {
+    running = false;
+    document.getElementById('startBtn').disabled    = false;
+    document.getElementById('startBtn').textContent = '▶ RESTART';
+    document.getElementById('statusMsg').textContent = '';
+    renderPanel(); // final render
+  }
+}
+
+// ══════════════════════════════════════════
+//  Loop
+// ══════════════════════════════════════════
+function loop() {
+  update();
+  render();
+  if (running) animId = requestAnimationFrame(loop);
+  else render();
+}
+
+function startRace() {
+  if (animId) cancelAnimationFrame(animId);
+  initHorses();
+
+  document.getElementById('panel').innerHTML  = '<p class="waiting-msg">레이스 시작!</p>';
+  document.getElementById('startBtn').disabled    = true;
+  document.getElementById('startBtn').textContent = '🏇 RACING...';
+  document.getElementById('statusMsg').textContent = '완주할 때까지 계속됩니다';
+
+  running = true;
+  loop();
+}
+
+document.getElementById('startBtn').addEventListener('click', startRace);
+
+initHorses();
+render();
+</script>
+</body>
+</html>

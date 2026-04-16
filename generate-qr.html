@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>QR 코드 생성기 — 무적의 야생마</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0a0a1f;
+  color: #fff;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 28px;
+}
+
+h1 {
+  font-size: clamp(11px, 2vw, 18px);
+  color: #ffe066;
+  text-shadow: 3px 3px 0 #b8860b;
+  letter-spacing: 0.2em;
+  text-align: center;
+  line-height: 1.8;
+}
+
+.sub {
+  font-size: clamp(7px, 1.2vw, 10px);
+  color: #88aaff;
+  letter-spacing: 0.15em;
+  text-align: center;
+  line-height: 2;
+}
+
+.input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 560px;
+}
+
+label {
+  font-size: 9px;
+  color: #aaa;
+  letter-spacing: 0.2em;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  background: #111130;
+  border: 3px solid #2a2a5a;
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: clamp(8px, 1.5vw, 11px);
+  letter-spacing: 0.05em;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input[type="text"]:focus { border-color: #ffe066; }
+
+.hint {
+  font-size: 8px;
+  color: #555;
+  letter-spacing: 0.1em;
+  line-height: 1.8;
+}
+.hint span { color: #88aaff; }
+
+.gen-btn {
+  padding: 14px 24px;
+  background: #0d2a0d;
+  border: 3px solid #22c55e;
+  border-radius: 4px;
+  color: #22c55e;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: clamp(9px, 1.5vw, 13px);
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+  max-width: 560px;
+}
+.gen-btn:hover { background: #1a3a1a; box-shadow: 0 0 12px rgba(34,197,94,0.3); }
+.gen-btn:active { transform: scale(0.97); }
+
+/* QR preview area */
+.qr-preview {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.qr-preview.visible { display: flex; }
+
+.qr-frame {
+  background: #fff;
+  padding: 12px;
+  border: 6px solid #ffe066;
+  box-shadow: 4px 4px 0 #b8860b;
+}
+
+#qrCanvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.url-display {
+  font-size: 8px;
+  color: #88aaff;
+  letter-spacing: 0.08em;
+  text-align: center;
+  word-break: break-all;
+  max-width: 400px;
+  line-height: 1.8;
+}
+
+.dl-btn {
+  padding: 12px 28px;
+  background: #1a1a3a;
+  border: 3px solid #ffe066;
+  border-radius: 4px;
+  color: #ffe066;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: clamp(9px, 1.5vw, 13px);
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.15s;
+}
+.dl-btn:hover { background: #2a2a5a; box-shadow: 0 0 12px rgba(255,224,102,0.3); }
+.dl-btn:active { transform: scale(0.97); }
+
+.dl-note {
+  font-size: 8px;
+  color: #555;
+  letter-spacing: 0.1em;
+  text-align: center;
+  line-height: 1.8;
+}
+.dl-note strong { color: #ffe066; }
+
+.divider {
+  width: 100%;
+  max-width: 560px;
+  border: none;
+  border-top: 2px solid #1a1a3a;
+}
+</style>
+</head>
+<body>
+
+<h1>🐎 QR 코드 생성기</h1>
+<div class="sub">vote.html URL을 입력하면<br>qr.png 파일을 생성합니다</div>
+
+<div class="input-wrap">
+  <label>VOTE PAGE URL</label>
+  <input type="text" id="urlInput"
+    placeholder="http://192.168.0.x:포트/vote.html"
+    value="">
+  <div class="hint">
+    💡 로컬 이벤트라면: <span>http://[내 IP 주소]/vote.html</span><br>
+    💡 외부 호스팅이라면: <span>https://yoursite.com/vote.html</span><br>
+    💡 같은 네트워크에서 열면 스마트폰으로 스캔 가능합니다
+  </div>
+</div>
+
+<button class="gen-btn" onclick="generateQR()">▶ QR 코드 생성</button>
+
+<hr class="divider">
+
+<div class="qr-preview" id="qrPreview">
+  <div class="qr-frame">
+    <canvas id="qrCanvas" width="256" height="256"></canvas>
+  </div>
+  <div class="url-display" id="urlDisplay"></div>
+  <a class="dl-btn" id="dlBtn" download="qr.png">⬇ qr.png 다운로드</a>
+  <div class="dl-note">
+    다운로드 후 <strong>qr.png</strong>를<br>
+    opening.html 과 같은 폴더에 넣으세요
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   MINIMAL QR CODE GENERATOR (pure JS, no library)
+   Based on ISO/IEC 18004 — supports alphanumeric/byte mode
+   Uses a self-contained Reed-Solomon + QR matrix encoder
+══════════════════════════════════════════════════ */
+
+/* ---------- Galois Field GF(256) ---------- */
+const GF_EXP = new Uint8Array(512);
+const GF_LOG = new Uint8Array(256);
+(function buildGF() {
+  let x = 1;
+  for (let i = 0; i < 255; i++) {
+    GF_EXP[i] = x;
+    GF_LOG[x] = i;
+    x <<= 1;
+    if (x & 0x100) x ^= 0x11d;
+  }
+  for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+})();
+
+function gfMul(a, b) {
+  if (!a || !b) return 0;
+  return GF_EXP[(GF_LOG[a] + GF_LOG[b]) % 255];
+}
+
+function gfPoly(e) {
+  let g = [1];
+  for (let i = 0; i < e; i++) {
+    const p = [1, GF_EXP[i]];
+    const t = new Array(g.length + 1).fill(0);
+    for (let j = 0; j < g.length; j++)
+      for (let k = 0; k < p.length; k++)
+        t[j + k] ^= gfMul(g[j], p[k]);
+    g = t;
+  }
+  return g;
+}
+
+function rsRemainder(data, gen) {
+  const rem = new Array(gen.length - 1).fill(0);
+  for (const byte of data) {
+    const coef = byte ^ rem.shift();
+    rem.push(0);
+    for (let i = 0; i < rem.length; i++)
+      rem[i] ^= gfMul(gen[i + 1], coef);
+  }
+  return rem;
+}
+
+/* ---------- QR Version 3-M data (up to 47 bytes) ---------- */
+/* We'll use version 2-M or 3-M depending on URL length */
+const QR_VERSIONS = [
+  // [version, totalCodewords, ecCodewords, dataCodewords]
+  { v:1, total:26,  ec:10, data:16 },
+  { v:2, total:44,  ec:16, data:28 },
+  { v:3, total:70,  ec:26, data:44 },
+  { v:4, total:100, ec:36, data:64 },
+  { v:5, total:134, ec:48, data:86 },
+];
+
+function pickVersion(byteLen) {
+  for (const qv of QR_VERSIONS)
+    if (byteLen + 3 <= qv.data) return qv; // +3 for mode+length+terminator overhead
+  return QR_VERSIONS[QR_VERSIONS.length - 1];
+}
+
+/* ---------- Format info (mask 0, error M) ---------- */
+const FORMAT_INFO = [
+  0x5412, 0x5125, 0x5E7C, 0x5B4B, 0x45F9, 0x40CE, 0x4F97, 0x4AA0,
+  0x77C4, 0x72F3, 0x7DAA, 0x789D, 0x662F, 0x6318, 0x6C41, 0x6976,
+  0x1689, 0x13BE, 0x1CE7, 0x19D0, 0x0762, 0x0255, 0x0D0C, 0x083B,
+  0x355F, 0x3068, 0x3F31, 0x3A06, 0x24B4, 0x2183, 0x2EDA, 0x2BED,
+];
+const MASK_PATTERNS = [
+  (r, c) => (r + c) % 2 === 0,
+  (r)    =>  r % 2 === 0,
+  (r, c) =>  c % 3 === 0,
+  (r, c) => (r + c) % 3 === 0,
+  (r, c) => (Math.floor(r/2) + Math.floor(c/3)) % 2 === 0,
+  (r, c) => (r*c) % 2 + (r*c) % 3 === 0,
+  (r, c) => ((r*c)%2 + (r*c)%3) % 2 === 0,
+  (r, c) => ((r+c)%2 + (r*c)%3) % 2 === 0,
+];
+
+const ALIGN_POSITIONS = [
+  [],           // v1
+  [6, 18],      // v2
+  [6, 22],      // v3
+  [6, 26],      // v4
+  [6, 30],      // v5
+];
+
+function makeQR(url) {
+  const data = new TextEncoder().encode(url);
+  if (data.length > 86) throw new Error('URL too long (max 86 bytes for version 5-M)');
+
+  const qv = pickVersion(data.length);
+  const size = qv.v * 4 + 17;
+  const ecGen = gfPoly(qv.ec);
+
+  /* --- build codeword stream --- */
+  const bits = [];
+  const push = (v, n) => { for (let i = n-1; i >= 0; i--) bits.push((v >> i) & 1); };
+
+  // mode: byte (0100)
+  push(0b0100, 4);
+  // character count
+  push(data.length, 8);
+  // data
+  for (const b of data) push(b, 8);
+  // terminator
+  const pad = Math.min(4, qv.data * 8 - bits.length);
+  for (let i = 0; i < pad; i++) bits.push(0);
+  while (bits.length % 8) bits.push(0);
+
+  // bytes
+  const bytes = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    let b = 0;
+    for (let j = 0; j < 8; j++) b = (b << 1) | bits[i+j];
+    bytes.push(b);
+  }
+  // pad codewords
+  const padBytes = [0xEC, 0x11];
+  let pi = 0;
+  while (bytes.length < qv.data) bytes.push(padBytes[pi++ % 2]);
+
+  // RS
+  const ec = rsRemainder(bytes, ecGen);
+  const codewords = [...bytes, ...ec];
+
+  /* --- place modules --- */
+  const M = Array.from({length: size}, () => new Array(size).fill(-1));
+  const F = Array.from({length: size}, () => new Array(size).fill(false)); // function modules
+
+  function setF(r, c, v) { M[r][c] = v; F[r][c] = true; }
+
+  // Finder patterns
+  function finder(tr, tc) {
+    for (let r = 0; r < 7; r++)
+      for (let c = 0; c < 7; c++) {
+        const dark = r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        setF(tr+r, tc+c, dark ? 1 : 0);
+      }
+    // separator
+    for (let i = -1; i <= 7; i++) {
+      if (tr+i >= 0 && tr+i < size) {
+        if (tc-1 >= 0)    setF(tr+i, tc-1, 0);
+        if (tc+7 < size)  setF(tr+i, tc+7, 0);
+      }
+      if (tc+i >= 0 && tc+i < size) {
+        if (tr-1 >= 0)    setF(tr-1, tc+i, 0);
+        if (tr+7 < size)  setF(tr+7, tc+i, 0);
+      }
+    }
+  }
+  finder(0, 0);
+  finder(0, size-7);
+  finder(size-7, 0);
+
+  // Timing
+  for (let i = 8; i < size-8; i++) {
+    setF(6, i, i%2===0 ? 1:0);
+    setF(i, 6, i%2===0 ? 1:0);
+  }
+
+  // Dark module
+  setF(size-8, 8, 1);
+
+  // Alignment patterns
+  const ap = ALIGN_POSITIONS[qv.v - 1];
+  for (const r of ap) for (const c of ap) {
+    if (F[r][c]) continue;
+    for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+      const dark = dr === -2 || dr === 2 || dc === -2 || dc === 2 || (dr === 0 && dc === 0);
+      setF(r+dr, c+dc, dark ? 1:0);
+    }
+  }
+
+  // Format info placeholders
+  const fmtPos = [
+    [8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],
+    [7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]
+  ];
+  for (const [r,c] of fmtPos) setF(r,c,0);
+  for (let i=0;i<7;i++) setF(size-1-i,8,0);
+  for (let i=0;i<8;i++) setF(8,size-1-i,0);
+
+  /* --- place data bits (zigzag) --- */
+  let bi = 0;
+  const allBits = [];
+  for (const cw of codewords) for (let i = 7; i >= 0; i--) allBits.push((cw >> i) & 1);
+
+  function placeBit(r, c, bit, maskFn) {
+    if (F[r][c]) return;
+    const masked = maskFn(r, c) ? bit ^ 1 : bit;
+    M[r][c] = masked;
+  }
+
+  // We need to try all 8 masks and pick the best penalty score
+  function fillData(maskIdx) {
+    const Mc = M.map(r => [...r]);
+    const mfn = MASK_PATTERNS[maskIdx];
+    let bit = 0;
+    let up = true;
+    for (let col = size-1; col >= 1; col -= 2) {
+      if (col === 6) col--;
+      for (let i = 0; i < size; i++) {
+        const r = up ? size-1-i : i;
+        for (let dc = 0; dc < 2; dc++) {
+          const c = col - dc;
+          if (!F[r][c]) {
+            Mc[r][c] = mfn(r, c) ? (allBits[bit] ?? 0) ^ 1 : (allBits[bit] ?? 0);
+            bit++;
+          }
+        }
+      }
+      up = !up;
+    }
+    return Mc;
+  }
+
+  // Penalty scoring
+  function penalty(mat) {
+    let p = 0;
+    // N1: 5+ consecutive same color in row/col
+    for (let r = 0; r < size; r++) {
+      let cnt = 1;
+      for (let c = 1; c < size; c++) {
+        if (mat[r][c] === mat[r][c-1]) { cnt++; if (cnt === 5) p += 3; else if (cnt > 5) p++; }
+        else cnt = 1;
+      }
+      cnt = 1;
+      for (let c = 1; c < size; c++) {
+        if (mat[c][r] === mat[c-1][r]) { cnt++; if (cnt === 5) p += 3; else if (cnt > 5) p++; }
+        else cnt = 1;
+      }
+    }
+    // N2: 2x2 blocks
+    for (let r = 0; r < size-1; r++)
+      for (let c = 0; c < size-1; c++)
+        if (mat[r][c]===mat[r][c+1] && mat[r][c]===mat[r+1][c] && mat[r][c]===mat[r+1][c+1]) p += 3;
+    // N3: finder-like patterns
+    const pat1=[1,0,1,1,1,0,1,0,0,0,0], pat2=[0,0,0,0,1,0,1,1,1,0,1];
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c <= size-11; c++) {
+        const row = mat[r].slice(c, c+11);
+        if (row.join('')===pat1.join('') || row.join('')===pat2.join('')) p += 40;
+        const col = mat.slice(c,c+11).map(x=>x[r]);
+        if (col.join('')===pat1.join('') || col.join('')===pat2.join('')) p += 40;
+      }
+    // N4: ratio
+    let dark = 0;
+    for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (mat[r][c]) dark++;
+    const pct = dark / (size*size) * 100;
+    p += Math.abs(Math.floor(pct/5)*5 - 50) / 5 * 10;
+    return p;
+  }
+
+  // Pick best mask
+  let bestMask = 0, bestPen = Infinity, bestMat = null;
+  for (let mi = 0; mi < 8; mi++) {
+    const mat = fillData(mi);
+    const pen = penalty(mat);
+    if (pen < bestPen) { bestPen = pen; bestMask = mi; bestMat = mat; }
+  }
+
+  // Apply format info
+  const fi = FORMAT_INFO[(1 << 3) | bestMask]; // M = error level 01
+  const fiBits = [];
+  for (let i = 14; i >= 0; i--) fiBits.push((fi >> i) & 1);
+
+  const fmtWrite = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+  for (let i = 0; i < 15; i++) {
+    const [r,c] = fmtWrite[i];
+    bestMat[r][c] = fiBits[i];
+    if (i < 7)  bestMat[size-1-i][8] = fiBits[i];
+    if (i >= 7) bestMat[8][size-15+i] = fiBits[i];
+  }
+  bestMat[size-8][8] = 1; // dark module
+
+  return { matrix: bestMat, size };
+}
+
+/* ---------- Render to canvas ---------- */
+function renderQR(matrix, size, canvas, quiet=4) {
+  const total = size + quiet * 2;
+  const scale = Math.floor(canvas.width / total);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000';
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
+      if (matrix[r][c])
+        ctx.fillRect((c + quiet)*scale, (r + quiet)*scale, scale, scale);
+}
+
+/* ---------- UI ---------- */
+function generateQR() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { alert('URL을 입력해주세요'); return; }
+
+  const preview = document.getElementById('qrPreview');
+  const canvas  = document.getElementById('qrCanvas');
+  const dlBtn   = document.getElementById('dlBtn');
+  const urlDisp = document.getElementById('urlDisplay');
+
+  try {
+    const { matrix, size } = makeQR(url);
+    renderQR(matrix, size, canvas);
+
+    urlDisp.textContent = url;
+    dlBtn.href = canvas.toDataURL('image/png');
+    preview.classList.add('visible');
+  } catch(e) {
+    alert('QR 생성 실패: ' + e.message);
+  }
+}
+
+// Pre-fill with detected local IP hint
+(async function detectIP() {
+  try {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pc.createDataChannel('');
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await new Promise(r => setTimeout(r, 300));
+    const sdp = pc.localDescription?.sdp || '';
+    const match = sdp.match(/\b(\d{1,3}(?:\.\d{1,3}){3})\b/g);
+    const local = (match || []).find(ip => ip.startsWith('192.') || ip.startsWith('10.'));
+    if (local) {
+      document.getElementById('urlInput').value = `http://${local}/vote.html`;
+    }
+    pc.close();
+  } catch(_) {}
+})();
+
+// Enter key triggers generation
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') generateQR();
+});
+</script>
+</body>
+</html>

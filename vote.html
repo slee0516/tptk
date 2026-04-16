@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>무적의 야생마 - VOTE</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<!-- Firebase CDN (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gold: #ffe066;
+  --gold-shadow: #b8860b;
+  --bg: #0a0a1f;
+  --card-bg: #111130;
+  --card-border: #2a2a5a;
+}
+
+body {
+  background: var(--bg);
+  color: #fff;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 40px;
+}
+
+/* ── SCANLINE ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── HEADER ── */
+.vote-header {
+  text-align: center;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.vote-title {
+  font-size: clamp(12px, 4vw, 22px);
+  color: var(--gold);
+  text-shadow: 3px 3px 0 var(--gold-shadow);
+  letter-spacing: 0.15em;
+  line-height: 1.8;
+  margin-bottom: 10px;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { color: var(--gold); }
+  50%      { color: #fff5aa; }
+}
+
+.vote-subtitle {
+  font-size: clamp(7px, 2.5vw, 11px);
+  color: #88aaff;
+  letter-spacing: 0.2em;
+}
+
+.vote-instruction {
+  font-size: clamp(7px, 2.5vw, 10px);
+  color: #aaa;
+  margin-top: 10px;
+  letter-spacing: 0.1em;
+  line-height: 1.8;
+}
+
+/* ── CHARACTER GRID ── */
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 24px;
+}
+
+.char-card {
+  background: var(--card-bg);
+  border: 3px solid var(--card-border);
+  border-radius: 6px;
+  padding: 12px 8px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.char-card:active {
+  transform: scale(0.95);
+}
+.char-card.selected {
+  border-color: var(--gold);
+  background: #1a1a40;
+  box-shadow: 0 0 12px rgba(255,224,102,0.3);
+}
+.char-card.selected .char-name {
+  color: var(--gold);
+}
+
+.char-card canvas {
+  image-rendering: pixelated;
+  display: block;
+  margin: 0 auto 4px;
+}
+
+.horse-icon {
+  font-size: 18px;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.char-name {
+  font-size: clamp(8px, 2.5vw, 11px);
+  color: #ccc;
+  letter-spacing: 0.05em;
+}
+
+/* ── SUBMIT BUTTON ── */
+.submit-wrap {
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 16px 20px;
+  background: #1a1a3a;
+  border: 3px solid #2a2a5a;
+  border-radius: 6px;
+  color: #555;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: clamp(9px, 3vw, 14px);
+  letter-spacing: 0.2em;
+  cursor: not-allowed;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.submit-btn.ready {
+  background: #0d2a0d;
+  border-color: #22c55e;
+  color: #22c55e;
+  cursor: pointer;
+  animation: btnPulse 1.5s ease-in-out infinite;
+}
+@keyframes btnPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+}
+.submit-btn.ready:active {
+  transform: scale(0.97);
+}
+
+/* ── STATE SCREENS ── */
+.state-screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 20px;
+  min-height: 60vh;
+  width: 100%;
+}
+.state-screen.visible { display: flex; }
+
+.state-icon { font-size: 48px; }
+
+.state-title {
+  font-size: clamp(12px, 4vw, 20px);
+  color: var(--gold);
+  text-shadow: 3px 3px 0 var(--gold-shadow);
+  letter-spacing: 0.2em;
+  line-height: 1.8;
+}
+
+.state-sub {
+  font-size: clamp(8px, 2.5vw, 11px);
+  color: #88aaff;
+  letter-spacing: 0.15em;
+  line-height: 1.8;
+}
+
+.state-error {
+  font-size: clamp(8px, 2.5vw, 11px);
+  color: #ef4444;
+  letter-spacing: 0.1em;
+  line-height: 1.8;
+}
+
+/* ── LOADING DOTS ── */
+.loading-dots::after {
+  content: '...';
+  animation: dots 1.2s steps(4, end) infinite;
+}
+@keyframes dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+}
+
+/* ── SELECTED BADGE ── */
+.char-card .check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.char-card.selected .check { opacity: 1; }
+
+/* ── PIXEL SPRITE drawing ── */
+</style>
+</head>
+<body>
+
+<!-- ═══ VOTE FORM (default view) ═══ -->
+<div id="voteForm">
+  <div class="vote-header">
+    <div class="vote-title">🐎 CAST YOUR VOTE</div>
+    <div class="vote-subtitle">무적의 야생마</div>
+    <div class="vote-instruction">응원할 캐릭터를 1명 선택하세요</div>
+  </div>
+
+  <div class="char-grid" id="charGrid"></div>
+
+  <div class="submit-wrap">
+    <button class="submit-btn" id="submitBtn" disabled>
+      SELECT A CHARACTER
+    </button>
+  </div>
+</div>
+
+<!-- ═══ SUBMITTING ═══ -->
+<div class="state-screen" id="stateSubmitting">
+  <div class="state-icon">⏳</div>
+  <div class="state-title">SUBMITTING<span class="loading-dots"></span></div>
+  <div class="state-sub">잠시만 기다려주세요</div>
+</div>
+
+<!-- ═══ SUCCESS ═══ -->
+<div class="state-screen" id="stateSuccess">
+  <div class="state-icon">🏆</div>
+  <div class="state-title">VOTE CAST!</div>
+  <div class="state-sub" id="successName">— — —</div>
+  <div class="state-sub" style="color:#22c55e;">투표가 완료되었습니다!</div>
+  <div class="state-sub" style="color:#555;margin-top:8px;">화면을 닫아도 됩니다</div>
+</div>
+
+<!-- ═══ ERROR ═══ -->
+<div class="state-screen" id="stateError">
+  <div class="state-icon">⚠️</div>
+  <div class="state-title" style="color:#ef4444;">ERROR</div>
+  <div class="state-error" id="errorMsg">알 수 없는 오류가 발생했습니다</div>
+  <button class="submit-btn ready" onclick="resetVote()"
+          style="max-width:300px;margin-top:12px;">
+    ↩ 다시 시도
+  </button>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   FIREBASE CONFIG
+══════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCB-XAqzgTkof5NIyevgUNyg8bIHKSjuYo",
+  authDomain:        "tptk-b610a.firebaseapp.com",
+  projectId:         "tptk-b610a",
+  storageBucket:     "tptk-b610a.firebasestorage.app",
+  messagingSenderId: "1017440166838",
+  appId:             "1:1017440166838:web:3a79df896cf225a3e71717"
+};
+
+const VOTES_COLLECTION = 'votes';
+
+/* ══════════════════════════════════════
+   CHARACTERS
+══════════════════════════════════════ */
+const CHARACTERS = [
+  { name: '정환', color: '#ff6b6b', skin: '#f4a26a' },
+  { name: '장우', color: '#4ecdc4', skin: '#d4956a' },
+  { name: '사랑', color: '#ffe066', skin: '#f9c48a' },
+  { name: '솔지', color: '#a78bfa', skin: '#f4a26a' },
+  { name: '지영', color: '#f97316', skin: '#d4956a' },
+  { name: '승훈', color: '#22c55e', skin: '#f4a26a' },
+  { name: '가희', color: '#ec4899', skin: '#f9c48a' },
+  { name: '서영', color: '#06b6d4', skin: '#f4a26a' },
+  { name: '수연', color: '#84cc16', skin: '#f9c48a' },
+  { name: '나현', color: '#f59e0b', skin: '#d4956a' },
+  { name: '승균', color: '#3b82f6', skin: '#f4a26a' },
+  { name: '소연', color: '#e879f9', skin: '#f9c48a' },
+];
+
+/* ══════════════════════════════════════
+   PIXEL SPRITE
+══════════════════════════════════════ */
+function drawPixelPerson(canvas, shirtColor, skinColor) {
+  const ctx = canvas.getContext('2d');
+  const S = canvas.width / 10;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function px(x, y, w, h, c) {
+    ctx.fillStyle = c;
+    ctx.fillRect(x*S, y*S, w*S, h*S);
+  }
+  px(3, 0, 4, 3, skinColor);
+  px(3, 0, 4, 1, '#1a1a1a');
+  px(3.5, 1, 0.8, 0.8, '#222');
+  px(5.7, 1, 0.8, 0.8, '#222');
+  px(2.5, 3, 5, 3.5, shirtColor);
+  px(1, 3, 1.5, 2.5, shirtColor);
+  px(7.5, 3, 1.5, 2.5, shirtColor);
+  px(2.5, 6.5, 2.2, 3, '#3344aa');
+  px(5.3, 6.5, 2.2, 3, '#3344aa');
+  px(2.2, 9.5, 2.5, 0.8, '#222');
+  px(5.3, 9.5, 2.5, 0.8, '#222');
+}
+
+/* ══════════════════════════════════════
+   BUILD GRID
+══════════════════════════════════════ */
+let selectedCharacter = null;
+const grid = document.getElementById('charGrid');
+const submitBtn = document.getElementById('submitBtn');
+
+CHARACTERS.forEach((ch) => {
+  const card = document.createElement('div');
+  card.className = 'char-card';
+
+  // check mark
+  const check = document.createElement('span');
+  check.className = 'check';
+  check.textContent = '✓';
+  card.appendChild(check);
+
+  // sprite canvas
+  const cvs = document.createElement('canvas');
+  cvs.width = 36;
+  cvs.height = 36;
+  cvs.style.width = '36px';
+  cvs.style.height = '36px';
+  card.appendChild(cvs);
+
+  // horse icon
+  const horse = document.createElement('div');
+  horse.className = 'horse-icon';
+  horse.textContent = '🐎';
+  card.appendChild(horse);
+
+  // name
+  const name = document.createElement('div');
+  name.className = 'char-name';
+  name.textContent = ch.name;
+  card.appendChild(name);
+
+  card.addEventListener('click', () => selectCharacter(ch.name, card));
+  grid.appendChild(card);
+
+  requestAnimationFrame(() => drawPixelPerson(cvs, ch.color, ch.skin));
+});
+
+function selectCharacter(name, cardEl) {
+  // deselect previous
+  document.querySelectorAll('.char-card.selected').forEach(c => c.classList.remove('selected'));
+  cardEl.classList.add('selected');
+  selectedCharacter = name;
+
+  submitBtn.disabled = false;
+  submitBtn.classList.add('ready');
+  submitBtn.textContent = `▶ VOTE FOR ${name}`;
+}
+
+/* ══════════════════════════════════════
+   FIREBASE INIT
+══════════════════════════════════════ */
+let db = null;
+try {
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+} catch (e) {
+  console.error('Firebase init error:', e);
+}
+
+/* ══════════════════════════════════════
+   SUBMIT VOTE
+══════════════════════════════════════ */
+submitBtn.addEventListener('click', async () => {
+  if (!selectedCharacter || submitBtn.disabled) return;
+
+  // prevent double-tap
+  submitBtn.disabled = true;
+
+  if (!db) {
+    showError('Firebase를 초기화할 수 없습니다.\n네트워크 연결을 확인해주세요.');
+    return;
+  }
+
+  showState('submitting');
+
+  try {
+    await db.collection(VOTES_COLLECTION).add({
+      character: selectedCharacter,
+      timestamp: Date.now()
+    });
+    showSuccess(selectedCharacter);
+  } catch (err) {
+    console.error('Vote submit error:', err);
+    showError('투표 저장에 실패했습니다.\n잠시 후 다시 시도해주세요.\n\n' + err.message);
+  }
+});
+
+/* ══════════════════════════════════════
+   STATE HELPERS
+══════════════════════════════════════ */
+function hideAll() {
+  document.getElementById('voteForm').style.display       = 'none';
+  document.getElementById('stateSubmitting').classList.remove('visible');
+  document.getElementById('stateSuccess').classList.remove('visible');
+  document.getElementById('stateError').classList.remove('visible');
+}
+
+function showState(state) {
+  hideAll();
+  if (state === 'submitting') {
+    document.getElementById('stateSubmitting').classList.add('visible');
+  } else if (state === 'success') {
+    document.getElementById('stateSuccess').classList.add('visible');
+  } else if (state === 'error') {
+    document.getElementById('stateError').classList.add('visible');
+  }
+}
+
+function showSuccess(name) {
+  document.getElementById('successName').textContent = `— ${name} —`;
+  showState('success');
+}
+
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  showState('error');
+}
+
+function resetVote() {
+  selectedCharacter = null;
+  submitBtn.disabled = true;
+  submitBtn.classList.remove('ready');
+  submitBtn.textContent = 'SELECT A CHARACTER';
+  document.querySelectorAll('.char-card.selected').forEach(c => c.classList.remove('selected'));
+  hideAll();
+  document.getElementById('voteForm').style.display = '';
+}
+</script>
+</body>
+</html>
