@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>🐎 무적의 야생마 🐎</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -182,9 +185,159 @@ h1 {
   to   { opacity: 1; transform: translateX(0); }
 }
 .row-animate { animation: rowIn 0.25s ease; }
+
+/* ════════════════════════════════════
+   RESULT OVERLAY
+════════════════════════════════════ */
+#resultOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+}
+#resultOverlay.visible { display: flex; }
+
+.result-box {
+  background: #0a0a1f;
+  border: 4px solid #ffe066;
+  box-shadow: 0 0 40px rgba(255,224,102,0.3), 8px 8px 0 #7a5800;
+  padding: 40px 48px;
+  max-width: 560px;
+  width: 90%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  animation: resultPop 0.4s ease-out;
+}
+@keyframes resultPop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.result-header {
+  font-size: clamp(14px, 3vw, 22px);
+  color: #ffe066;
+  text-shadow: 3px 3px 0 #b8860b;
+  letter-spacing: 0.2em;
+  animation: glowPulse 1.5s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%,100% { color: #ffe066; }
+  50%      { color: #fff5aa; }
+}
+
+.result-divider { border: none; border-top: 2px solid #1a1a3a; }
+
+.result-horse-label {
+  font-size: clamp(7px, 1.5vw, 10px);
+  color: #555;
+  letter-spacing: 0.3em;
+}
+.result-horse-name {
+  font-size: clamp(18px, 4vw, 32px);
+  color: #fff;
+  text-shadow: 3px 3px 0 #333;
+  letter-spacing: 0.15em;
+  margin-top: 6px;
+  animation: nameFlash 0.6s ease-out;
+}
+@keyframes nameFlash {
+  0%   { transform: scale(1.3); color: #ffe066; }
+  100% { transform: scale(1);   color: #fff; }
+}
+.result-place-badge {
+  display: inline-block;
+  font-size: clamp(7px, 1.2vw, 10px);
+  color: #88aaff;
+  letter-spacing: 0.2em;
+  margin-top: 4px;
+}
+
+.result-bet-label {
+  font-size: clamp(7px, 1.5vw, 10px);
+  color: #555;
+  letter-spacing: 0.3em;
+}
+.result-bet-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.bet-team {
+  background: #1a1a3a;
+  border: 2px solid #4444aa;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: clamp(10px, 2vw, 15px);
+  color: #aac4ff;
+  animation: teamPop 0.4s ease-out both;
+}
+@keyframes teamPop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.result-no-bet {
+  font-size: clamp(7px, 1.2vw, 10px);
+  color: #555;
+  letter-spacing: 0.15em;
+  line-height: 2;
+}
+
+.reveal-btn {
+  padding: 14px 24px;
+  background: #1a1a3a;
+  border: 3px solid #ffe066;
+  border-radius: 4px;
+  color: #ffe066;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(9px, 1.5vw, 12px);
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all 0.15s;
+  animation: btnGlow 1.5s ease-in-out infinite;
+  align-self: center;
+}
+@keyframes btnGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,224,102,0.5); }
+  50%      { box-shadow: 0 0 0 10px rgba(255,224,102,0); }
+}
+.reveal-btn:hover  { background: #2a2a5a; }
+.reveal-btn:active { transform: scale(0.97); }
+
+.result-loading {
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 0.15em;
+  animation: loadDots 1.2s steps(4,end) infinite;
+}
+@keyframes loadDots {
+  0%  { content: 'LOADING'; }
+  25% { opacity: 0.7; }
+  50% { opacity: 0.4; }
+  75% { opacity: 0.7; }
+}
 </style>
 </head>
 <body>
+
+<!-- ═══ RESULT OVERLAY ═══ -->
+<div id="resultOverlay">
+  <div class="result-box">
+    <div class="result-header">🏆 RACE RESULT</div>
+    <hr class="result-divider">
+    <div id="resultContent">
+      <div class="result-loading">LOADING RESULTS...</div>
+    </div>
+  </div>
+</div>
 
 <div class="layout">
   <canvas id="canvas"></canvas>
@@ -696,6 +849,7 @@ function update() {
     document.getElementById('startBtn').textContent = '▶ RESTART';
     document.getElementById('statusMsg').textContent = '';
     renderPanel(); // final render
+    showRevealButton(); // 결과 공개 버튼 표시
   }
 }
 
@@ -726,6 +880,147 @@ document.getElementById('startBtn').addEventListener('click', startRace);
 
 initHorses();
 render();
+
+/* ══════════════════════════════════════════════════
+   FIREBASE CONFIG
+══════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCB-XAqzgTkof5NIyevgUNyg8bIHKSjuYo",
+  authDomain:        "tptk-b610a.firebaseapp.com",
+  projectId:         "tptk-b610a",
+  storageBucket:     "tptk-b610a.firebasestorage.app",
+  messagingSenderId: "1017440166838",
+  appId:             "1:1017440166838:web:3a79df896cf225a3e71717"
+};
+
+/* ── roundId: URL 파라미터 또는 localStorage ── */
+function getCurrentRoundId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('roundId') || localStorage.getItem('currentRoundId') || null;
+}
+
+/* ── 레이스 종료 시 결과 공개 버튼 ── */
+function showRevealButton() {
+  const panel = document.getElementById('panel');
+  const btn = document.createElement('button');
+  btn.className = 'reveal-btn pixel-text';
+  btn.textContent = '🏆 BETTING RESULT 공개';
+  btn.style.marginTop = '16px';
+  btn.onclick = () => {
+    btn.remove();
+    fetchVotesAndReveal();
+  };
+  panel.appendChild(btn);
+}
+
+/* ── Firestore 투표 조회 & 결과 화면 ── */
+async function fetchVotesAndReveal() {
+  const overlay = document.getElementById('resultOverlay');
+  const content = document.getElementById('resultContent');
+  overlay.classList.add('visible');
+  content.innerHTML = '<div class="result-loading">LOADING RESULTS...</div>';
+
+  const roundId = getCurrentRoundId();
+
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.firestore();
+
+    // 투표 데이터 조회 (roundId 있으면 필터, 없으면 전체)
+    let query = db.collection('votes');
+    if (roundId) query = query.where('roundId', '==', roundId);
+    const snapshot = await query.get();
+
+    // 투표 맵 빌드: { "정환": ["3조","5조"], ... }
+    const voteMap = {};
+    snapshot.docs.forEach(doc => {
+      const d = doc.data();
+      if (!d.character || !d.team) return;
+      if (!voteMap[d.character]) voteMap[d.character] = [];
+      if (!voteMap[d.character].includes(d.team)) {
+        voteMap[d.character].push(d.team);
+      }
+    });
+
+    // 순위 배열: results[0] = 1등 말 객체
+    // HORSE_NAMES = ['정환 말', '장우 말', ...] → character = '정환'
+    const raceOrder = results.map(h => ({
+      name: h.name,                          // "정환 말"
+      charName: h.name.replace(' 말', ''),   // "정환"
+      rank: h.rank
+    }));
+
+    // 알고리즘: 1등부터 순서대로 베팅 팀이 있는 말 찾기
+    let winnerEntry = null;
+    for (const entry of raceOrder) {
+      const teams = voteMap[entry.charName] || [];
+      if (teams.length > 0) {
+        winnerEntry = { ...entry, teams };
+        break;
+      }
+    }
+
+    renderResultContent(winnerEntry, raceOrder[0]);
+
+  } catch (e) {
+    console.error('Result fetch error:', e);
+    content.innerHTML = `
+      <div class="result-horse-label">ERROR</div>
+      <div class="result-no-bet" style="color:#ef4444">
+        결과를 불러오지 못했습니다<br>${e.message}
+      </div>`;
+  }
+}
+
+/* ── 결과 화면 렌더링 ── */
+function renderResultContent(winnerEntry, firstPlace) {
+  const content = document.getElementById('resultContent');
+  const medals  = ['🥇','🥈','🥉'];
+  const ordinal = ['1ST','2ND','3RD','4TH','5TH','6TH','7TH','8TH','9TH','10TH','11TH','12TH'];
+
+  if (!winnerEntry) {
+    // 아무도 베팅 안 한 경우
+    content.innerHTML = `
+      <div class="result-horse-label">1ST PLACE</div>
+      <div class="result-horse-name">${firstPlace.charName}</div>
+      <div class="result-bet-label" style="margin-top:16px">BET BY</div>
+      <div class="result-no-bet">이 라운드에서 베팅한 팀이 없습니다 😢</div>`;
+    return;
+  }
+
+  const placeIdx  = winnerEntry.rank - 1;
+  const medal     = medals[placeIdx] || '🏅';
+  const placeText = ordinal[placeIdx] || (winnerEntry.rank + 'TH');
+  const isFirst   = winnerEntry.rank === 1;
+
+  let html = '';
+
+  if (!isFirst) {
+    html += `<div class="result-no-bet">1등에 베팅한 팀이 없어<br>${placeText} PLACE로 이동</div>
+             <hr class="result-divider">`;
+  }
+
+  html += `
+    <div class="result-horse-label">${isFirst ? 'WINNING HORSE' : 'TOP BETTED HORSE'}</div>
+    <div class="result-horse-name">${medal} ${winnerEntry.charName}</div>
+    <div class="result-place-badge">${placeText} PLACE</div>
+    <hr class="result-divider">
+    <div class="result-bet-label">BET BY</div>
+    <div class="result-bet-list">
+      ${winnerEntry.teams.map((t, i) =>
+        `<div class="bet-team pixel-text" style="animation-delay:${i*0.15}s">${t}</div>`
+      ).join('')}
+    </div>`;
+
+  content.innerHTML = html;
+
+  // 오버레이 클릭으로 닫기
+  document.getElementById('resultOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('resultOverlay')) {
+      document.getElementById('resultOverlay').classList.remove('visible');
+    }
+  });
+}
 </script>
 </body>
 </html>

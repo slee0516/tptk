@@ -372,6 +372,93 @@ body::after {
 }
 
 /* ════════════════════════════
+   CHAR CARD TEAM BADGE
+════════════════════════════ */
+.vote-teams-badge {
+  margin-top: 4px;
+  min-height: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+.team-pill {
+  background: #1e1e4a;
+  border: 1px solid #4444aa;
+  border-radius: 2px;
+  font-size: 7px;
+  color: #aac4ff;
+  padding: 1px 4px;
+  letter-spacing: 0.05em;
+  animation: pillPop 0.25s ease-out;
+}
+@keyframes pillPop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.char-card.has-vote {
+  border-color: #4444aa;
+  background: #12122e;
+}
+
+/* ════════════════════════════
+   VOTE LOG (LIVE BETS)
+════════════════════════════ */
+.vote-log-section {
+  width: 100%;
+  max-width: 1100px;
+  margin-top: 14px;
+  border-top: 2px solid #1a1a3a;
+  padding-top: 10px;
+}
+.vote-log-header {
+  font-size: clamp(7px, 0.9vw, 10px);
+  color: #555;
+  letter-spacing: 0.3em;
+  margin-bottom: 8px;
+}
+.vote-log-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vote-log-empty {
+  font-size: clamp(7px, 0.9vw, 9px);
+  color: #333;
+  letter-spacing: 0.2em;
+}
+.vote-log-entry {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #0d0d22;
+  border: 2px solid #1e1e44;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: clamp(7px, 0.9vw, 9px);
+  animation: logSlide 0.3s ease-out;
+}
+@keyframes logSlide {
+  0%   { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.log-team {
+  color: #ffe066;
+  letter-spacing: 0.05em;
+}
+.log-arrow {
+  color: #444;
+}
+.log-char {
+  color: #88aaff;
+  letter-spacing: 0.05em;
+}
+.log-new {
+  border-color: #ffe066;
+  background: #1a1a2a;
+}
+
+/* ════════════════════════════
    VOTE COUNTER
 ════════════════════════════ */
 .vote-counter-wrap {
@@ -664,6 +751,14 @@ canvas.sprite {
       <div class="countdown-text pixel-text" id="countdown">AUTO: 60s</div>
     </div>
   </div>
+
+  <!-- LIVE BET LOG -->
+  <div class="vote-log-section" id="voteLogSection">
+    <div class="vote-log-header pixel-text">⚡ LIVE BETS</div>
+    <div class="vote-log-list" id="voteLogList">
+      <div class="vote-log-empty pixel-text">WAITING FOR VOTES...</div>
+    </div>
+  </div>
 </div>
 
 <!-- ════════ RACE BEGINS SCREEN ════════ -->
@@ -782,6 +877,12 @@ function drawPixelPerson(canvas, shirtColor, skinColor) {
     name.textContent = ch.name;
     card.appendChild(name);
 
+    // Team badge row (filled by Firestore listener)
+    const badge = document.createElement('div');
+    badge.className = 'vote-teams-badge';
+    badge.dataset.char = ch.name;
+    card.appendChild(badge);
+
     grid.appendChild(card);
 
     // Draw after DOM insert
@@ -829,12 +930,13 @@ function goToRace() {
 ═══════════════════════════════════════════ */
 let countdownInterval = null;
 
-function startCountdown() {
+async function startCountdown() {
   let remaining = AUTO_ADVANCE_SECONDS;
   const bar = document.getElementById('timerBar');
   const txt = document.getElementById('countdown');
 
-  // Start Firestore listener now that Firebase SDK is loaded
+  // 새 라운드 생성 후 Firestore 리스너 시작
+  await createNewRound();
   initFirestore();
 
   // Start full, shrink to 0
@@ -909,7 +1011,10 @@ function goToRaceBegins() {
 
     // go to game after 2.8s
     setTimeout(() => {
-      flashAndGo(() => { window.location.href = 'horse-race.html'; });
+      const rid = currentRoundId || localStorage.getItem('currentRoundId') || '';
+      flashAndGo(() => {
+        window.location.href = 'horse-race.html' + (rid ? '?roundId=' + rid : '');
+      });
     }, 2800);
   });
 }
@@ -941,6 +1046,9 @@ const VOTE_TARGET = 6;
 
 let firestoreUnsub = null;
 let currentVoteCount = 0;
+let currentRoundId = null;
+let currentVoteMap = {}; // { "정환": ["3조","5조"], ... }
+let voteLogEntries = []; // [{ team, character, timestamp }, ...]
 
 function setFirebaseStatus(state) {
   // state: 'connecting' | 'connected' | 'error'
@@ -989,31 +1097,80 @@ function updateVoteUI(count) {
   });
 }
 
+/* ═══════════════════════════════════════════
+   ROUND 관리
+═══════════════════════════════════════════ */
+async function createNewRound() {
+  if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.firestore();
+    currentRoundId = 'r_' + Date.now();
+    localStorage.setItem('currentRoundId', currentRoundId);
+    await db.collection('rounds').doc('current').set({
+      roundId: currentRoundId,
+      startedAt: Date.now()
+    });
+    console.log('New round created:', currentRoundId);
+  } catch (e) {
+    console.error('Round create error:', e);
+    // fallback: still use the ID even if write failed
+    currentRoundId = 'r_' + Date.now();
+    localStorage.setItem('currentRoundId', currentRoundId);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   FIRESTORE 리스너
+═══════════════════════════════════════════ */
 function initFirestore() {
-  // Guard: skip if config not set
   if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
     setFirebaseStatus('error');
     document.getElementById('statusText').textContent = 'NO CONFIG';
     return;
   }
+  if (!currentRoundId) return;
 
   try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(FIREBASE_CONFIG);
-    }
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     const db = firebase.firestore();
-
     setFirebaseStatus('connecting');
 
+    if (firestoreUnsub) firestoreUnsub();
+
     firestoreUnsub = db.collection(VOTES_COLLECTION)
+      .where('roundId', '==', currentRoundId)
       .onSnapshot(
         (snapshot) => {
           setFirebaseStatus('connected');
+
+          // 투표 맵 & 로그 빌드
+          const newMap = {};
+          const newLog = [];
+          snapshot.docs.forEach(doc => {
+            const d = doc.data();
+            if (!d.character || !d.team) return;
+            if (!newMap[d.character]) newMap[d.character] = [];
+            if (!newMap[d.character].includes(d.team)) {
+              newMap[d.character].push(d.team);
+            }
+            newLog.push({
+              team: d.team,
+              character: d.character,
+              timestamp: d.timestamp || 0
+            });
+          });
+          newLog.sort((a, b) => b.timestamp - a.timestamp);
+
+          currentVoteMap = newMap;
+          voteLogEntries = newLog;
+
           const count = Math.min(snapshot.size, VOTE_TARGET);
           updateVoteUI(count);
+          updateCharCards(newMap);
+          updateVoteLog(newLog.slice(0, 6));
 
           if (count >= VOTE_TARGET && currentScreen === 'screen-select') {
-            // small delay for last pip animation to be seen
             setTimeout(() => goToRaceBegins(), 800);
           }
         },
@@ -1028,8 +1185,59 @@ function initFirestore() {
   }
 }
 
-// initFirestore is called inside startCountdown() so Firebase
-// loads after Firebase SDK scripts are guaranteed to be parsed.
+/* ═══════════════════════════════════════════
+   캐릭터 카드 팀 뱃지 업데이트
+═══════════════════════════════════════════ */
+function updateCharCards(voteMap) {
+  document.querySelectorAll('.vote-teams-badge').forEach(badge => {
+    const char = badge.dataset.char;
+    const teams = voteMap[char] || [];
+    const card = badge.closest('.char-card');
+
+    badge.innerHTML = '';
+    if (teams.length > 0) {
+      card.classList.add('has-vote');
+      teams.forEach(team => {
+        const pill = document.createElement('span');
+        pill.className = 'team-pill pixel-text';
+        pill.textContent = team;
+        badge.appendChild(pill);
+      });
+    } else {
+      card.classList.remove('has-vote');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   투표 로그 업데이트
+═══════════════════════════════════════════ */
+let _prevLogLen = 0;
+function updateVoteLog(entries) {
+  const list = document.getElementById('voteLogList');
+  if (!list) return;
+
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="vote-log-empty pixel-text">WAITING FOR VOTES...</div>';
+    _prevLogLen = 0;
+    return;
+  }
+
+  list.innerHTML = '';
+  entries.forEach((e, i) => {
+    const el = document.createElement('div');
+    el.className = 'vote-log-entry pixel-text' + (i === 0 && entries.length > _prevLogLen ? ' log-new' : '');
+    el.innerHTML = `<span class="log-team">${e.team}</span><span class="log-arrow">→</span><span class="log-char">${e.character}</span>`;
+    list.appendChild(el);
+    if (i === 0 && entries.length > _prevLogLen) {
+      setTimeout(() => el.classList.remove('log-new'), 800);
+    }
+  });
+  _prevLogLen = entries.length;
+}
+
+// initFirestore는 startCountdown() 내부에서 호출됨
+// (Firebase SDK가 로드된 이후 보장)
 </script>
 
 </body>
