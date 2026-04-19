@@ -106,7 +106,7 @@ body::after {
   left: -120px;
   width: 120px;
   height: 80px;
-  animation: horseRun 6s linear infinite;
+  animation: horseRun 12s linear infinite;
 }
 @keyframes horseRun {
   0%   { left: -120px; }
@@ -1313,6 +1313,25 @@ document.getElementById('startRaceBtn').addEventListener('click', () => {
 
 // initFirestore는 startCountdown() 내부에서 호출됨
 // (Firebase SDK가 로드된 이후 보장)
+// ── OPENING HORSE RANDOM JUMP ──
+const openingHorse = document.querySelector('.horse-silhouette');
+
+function triggerJump() {
+  if (!openingHorse) return;
+  openingHorse.classList.add('jump');
+
+  setTimeout(() => {
+    openingHorse.classList.remove('jump');
+  }, 700);
+}
+
+// 2~4초마다 랜덤 점프
+setInterval(() => {
+  if (Math.random() < 0.6) { // 60% 확률
+    triggerJump();
+  }
+}, 2500);
+
 </script>
 
 <style>
@@ -1357,6 +1376,22 @@ document.getElementById('startRaceBtn').addEventListener('click', () => {
     0%, 100% { transform: translateX(-50%) translateY(0); }
     50%      { transform: translateX(-50%) translateY(-2px); }
   }
+
+  
+@keyframes horseJump {
+  0%   { transform: translateY(0); }
+  40%  { transform: translateY(-24px); }
+  70%  { transform: translateY(-14px); }
+  100% { transform: translateY(0); }
+}
+
+/* 점프 중일 때 */
+.horse-silhouette.jump {
+  animation:
+    horseRun 12s linear infinite,
+    horseJump 0.6s ease-out;
+}
+
   </style>
   
 </body>
