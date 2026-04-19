@@ -846,18 +846,20 @@ canvas.sprite {
    DATA
 ═══════════════════════════════════════════ */
 const CHARACTERS = [
-  { name: '정환', color: '#ff6b6b', skinTone: '#f4a26a' },
-  { name: '장우', color: '#4ecdc4', skinTone: '#d4956a' },
-  { name: '사랑', color: '#ffe066', skinTone: '#f9c48a' },
-  { name: '솔지', color: '#a78bfa', skinTone: '#f4a26a' },
-  { name: '지영', color: '#f97316', skinTone: '#d4956a' },
-  { name: '승훈', color: '#22c55e', skinTone: '#f4a26a' },
-  { name: '가희', color: '#ec4899', skinTone: '#f9c48a' },
-  { name: '서영', color: '#06b6d4', skinTone: '#f4a26a' },
-  { name: '수연', color: '#84cc16', skinTone: '#f9c48a' },
-  { name: '나현', color: '#f59e0b', skinTone: '#d4956a' },
-  { name: '승균', color: '#3b82f6', skinTone: '#f4a26a' },
-  { name: '소연', color: '#e879f9', skinTone: '#f9c48a' },
+  // ── ROW 1 (col 1→6) ──────────────────────────────────────────────
+  { name: '정환', color: '#FF2233', skinTone: '#f4a26a', accessory: 'glasses'    }, // 스칼렛 레드
+  { name: '장우', color: '#1A237E', skinTone: '#d4956a', accessory: 'ribbon'     }, // 남색
+  { name: '사랑', color: '#FFE000', skinTone: '#f9c48a', accessory: 'crown'      }, // 순 노랑
+  { name: '솔지', color: '#8833FF', skinTone: '#f4a26a', accessory: 'hat'        }, // 딥 바이올렛
+  { name: '지영', color: '#FF6600', skinTone: '#d4956a', accessory: 'headphones' }, // 딥 오렌지
+  { name: '승훈', color: '#22EE44', skinTone: '#f4a26a', accessory: 'headband'   }, // 비비드 그린
+  // ── ROW 2 (col 1→6) ──────────────────────────────────────────────
+  { name: '가희', color: '#BBEE00', skinTone: '#f9c48a', accessory: 'star'       }, // 라임/샤트뢰즈  ← col1 세로 레드와 보색
+  { name: '서영', color: '#FFB3C6', skinTone: '#f4a26a', accessory: 'beret'      }, // 파스텔 핑크
+  { name: '수연', color: '#00CCDD', skinTone: '#f9c48a', accessory: 'flower'     }, // 아쿠아/시안    ← col3 노랑과 대비
+  { name: '나현', color: '#FFAA00', skinTone: '#d4956a', accessory: 'heart'      }, // 앰버 골드      ← col4 바이올렛과 대비
+  { name: '승균', color: '#5522CC', skinTone: '#f4a26a', accessory: 'sunglasses' }, // 인디고         ← col5 오렌지와 대비
+  { name: '소연', color: '#FF22CC', skinTone: '#f9c48a', accessory: 'catears'    }, // 마젠타         ← col6 그린과 보색
 ];
 
 // 투표 완료 기준: 6개 조(팀) 모두 참여
@@ -916,6 +918,149 @@ function drawPixelPerson(canvas, shirtColor, skinColor) {
 }
 
 /* ═══════════════════════════════════════════
+   ACCESSORY OVERLAY DRAWING
+   Canvas 40×40, S=4px/unit. Head: x12-27 y0-11
+   Hair: y0-3  Eyes: left≈x14,y4  right≈x23,y4
+═══════════════════════════════════════════ */
+function shadeHex(hex, amt) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const clamp = v => Math.min(255, Math.max(0, v));
+  const r = clamp((n >> 16) + amt);
+  const g = clamp(((n >> 8) & 0xff) + amt);
+  const b = clamp((n & 0xff) + amt);
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+function drawAccessory(canvas, type, charColor) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 40, 40);
+  const f = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+
+  switch (type) {
+
+    case 'glasses': {
+      // thin wire frames around both eyes
+      const c = '#111111';
+      f(13,4,7,1,c); f(13,8,7,1,c); f(13,4,1,5,c); f(19,4,1,5,c); // left lens
+      f(21,4,7,1,c); f(21,8,7,1,c); f(21,4,1,5,c); f(27,4,1,5,c); // right lens
+      f(20,6,1,1,c);                                                  // bridge
+      f(12,6,1,2,c); f(28,6,1,2,c);                                  // temples
+      break;
+    }
+
+    case 'ribbon': {
+      // pink bow at top-right of hair
+      const c = '#ff88cc', k = '#cc2266';
+      f(19,0,3,1,c); f(18,1,4,1,c); f(19,2,3,1,c); // left wing
+      f(22,1,2,1,k);                                  // center knot
+      f(24,0,3,1,c); f(24,1,4,1,c); f(24,2,3,1,c); // right wing
+      break;
+    }
+
+    case 'crown': {
+      // gold pixel crown sitting on hair
+      const g = '#ffe066', d = '#b8860b';
+      f(13,0,2,1,g); f(19,0,2,1,g); f(25,0,2,1,g); // three peaks
+      f(12,1,16,3,g);                                 // crown body
+      f(12,4,16,1,d);                                 // base trim
+      f(14,2,2,1,'#ff4444');                          // red gem
+      f(19,2,2,1,'#4499ff');                          // blue gem
+      f(24,2,2,1,'#44dd44');                          // green gem
+      break;
+    }
+
+    case 'hat': {
+      // beret in character's own color
+      const dk = shadeHex(charColor, -35), lt = shadeHex(charColor, +40);
+      f(14,0,12,4,charColor); f(13,2,14,2,charColor); // beret body
+      f(12,3,16,1,dk);                                  // dark brim line
+      f(22,0,3,1,lt);                                   // pompom highlight
+      break;
+    }
+
+    case 'headphones': {
+      // dark band + colored ear cups
+      const b = '#1a1a33', p = '#3355cc';
+      f(13,0,14,2,b);                        // headband arc
+      f(9,3,4,6,b);  f(10,4,2,5,p);         // left cup
+      f(27,3,4,6,b); f(28,4,2,5,p);         // right cup
+      break;
+    }
+
+    case 'headband': {
+      // thin band across hair in character color
+      const dk = shadeHex(charColor, -30);
+      f(12,1,16,2,charColor);
+      f(12,1,16,1,dk);                       // top edge darker
+      break;
+    }
+
+    case 'star': {
+      // small gold star pin on hair
+      const y = '#ffee00';
+      f(19,0,2,1,y);
+      f(18,1,4,1,y);
+      f(17,2,6,1,y);
+      f(17,3,1,1,y); f(18,3,4,1,y); f(22,3,1,1,y); // lower + wing tips
+      f(19,4,2,1,y);
+      break;
+    }
+
+    case 'beret': {
+      // angled beret in character color with pompom
+      const dk = shadeHex(charColor, -30), lt = shadeHex(charColor, +35);
+      f(14,0,12,1,lt);          // top highlight
+      f(13,1,14,2,charColor);   // main body
+      f(12,3,16,1,dk);          // brim
+      f(24,0,2,1,lt);           // pompom
+      break;
+    }
+
+    case 'flower': {
+      // small 4-petal flower pin
+      const p = '#ff99bb', c = '#ffe066';
+      f(20,0,2,2,p);  // top petal
+      f(18,2,2,2,p);  // left petal
+      f(22,2,2,2,p);  // right petal
+      f(20,4,2,2,p);  // bottom petal
+      f(20,2,2,2,c);  // center
+      break;
+    }
+
+    case 'heart': {
+      // small red heart on hair
+      const r = '#ff3366';
+      f(18,0,2,2,r); f(21,0,2,2,r); // two top lobes
+      f(17,2,7,2,r);                  // wide middle
+      f(18,4,5,1,r);
+      f(19,5,3,1,r);
+      f(20,6,1,1,r);                  // bottom tip
+      break;
+    }
+
+    case 'sunglasses': {
+      // blue-tinted filled lenses + gold frames
+      ctx.fillStyle = 'rgba(0,60,130,0.82)';
+      ctx.fillRect(14,5,5,4); ctx.fillRect(22,5,5,4); // tint
+      const g = '#ffe066';
+      f(13,4,7,1,g); f(13,8,7,1,g); f(13,4,1,5,g); f(19,4,1,5,g); // left frame
+      f(21,4,7,1,g); f(21,8,7,1,g); f(21,4,1,5,g); f(27,4,1,5,g); // right frame
+      f(20,6,1,1,g);                                                  // bridge
+      f(12,5,1,3,g); f(28,5,1,3,g);                                  // temples
+      break;
+    }
+
+    case 'catears': {
+      // small cat ears in character color with pink inner
+      const inner = '#ffccf0';
+      f(12,0,5,1,charColor); f(13,1,3,2,charColor); f(14,1,1,1,inner); // left ear
+      f(23,0,5,1,charColor); f(24,1,3,2,charColor); f(24,1,1,1,inner); // right ear
+      break;
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════
    CHARACTER GRID BUILD
 ═══════════════════════════════════════════ */
 (function buildGrid() {
@@ -926,14 +1071,26 @@ function drawPixelPerson(canvas, shirtColor, skinColor) {
     card.dataset.num = String(i + 1).padStart(2, '0');
     card.title = ch.name;
 
-    // Canvas sprite
+    // ── Sprite wrapper (position:relative so overlay can be absolute) ──
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;width:40px;height:40px;margin:0 auto 2px;display:block;';
+
+    // Base sprite canvas
     const cvs = document.createElement('canvas');
     cvs.className = 'sprite';
     cvs.width = 40;
     cvs.height = 40;
-    cvs.style.width = '40px';
-    cvs.style.height = '40px';
-    card.appendChild(cvs);
+    cvs.style.cssText = 'width:40px;height:40px;display:block;image-rendering:pixelated;';
+    wrap.appendChild(cvs);
+
+    // Accessory overlay canvas (transparent, drawn on top)
+    const overlay = document.createElement('canvas');
+    overlay.width = 40;
+    overlay.height = 40;
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:40px;height:40px;pointer-events:none;image-rendering:pixelated;';
+    wrap.appendChild(overlay);
+
+    card.appendChild(wrap);
 
     // Horse icon
     const horse = document.createElement('div');
@@ -955,8 +1112,11 @@ function drawPixelPerson(canvas, shirtColor, skinColor) {
 
     grid.appendChild(card);
 
-    // Draw after DOM insert
-    requestAnimationFrame(() => drawPixelPerson(cvs, ch.color, ch.skinTone));
+    // Draw sprite then accessory overlay
+    requestAnimationFrame(() => {
+      drawPixelPerson(cvs, ch.color, ch.skinTone);
+      if (ch.accessory) drawAccessory(overlay, ch.accessory, ch.color);
+    });
   });
 })();
 
