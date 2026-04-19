@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>무적의 야생마 - Opening</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>@font-face { font-family: 'NeoDunggeunmo'; src: url('neodgm.woff2') format('woff2'); font-weight: normal; font-style: normal; }</style>
 <!-- Firebase SDK (loaded early so it's ready before user reaches select screen) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -14,7 +13,7 @@
 body {
   background: #0d0d1a;
   color: #fff;
-  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-family: 'NeoDunggeunmo', monospace;
   overflow: hidden;
   width: 100vw;
   height: 100vh;
@@ -131,7 +130,7 @@ body::after {
   line-height: 1.8;
   margin-bottom: 24px;
   animation: titlePulse 2s ease-in-out infinite;
-  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-family: 'NeoDunggeunmo', monospace;
   image-rendering: pixelated;
 }
 @keyframes titlePulse {
@@ -316,7 +315,7 @@ body::after {
 .char-name {
   font-size: clamp(7px, 0.9vw, 10px);
   color: #ccc;
-  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-family: 'NeoDunggeunmo', monospace;
   letter-spacing: 0.03em;
   white-space: nowrap;
   overflow: hidden;
@@ -653,6 +652,69 @@ canvas.sprite {
   display: block;
   margin: 0 auto 2px;
 }
+
+/* ════════════════════════════
+   READY PANEL
+════════════════════════════ */
+#readyPanel {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 22px 36px;
+  background: #08081c;
+  border: 3px solid #ffe066;
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 #7a5800, 0 0 24px rgba(255,224,102,0.18);
+  width: 100%;
+  max-width: 1100px;
+  text-align: center;
+  animation: readyGlow 1.6s ease-in-out infinite;
+}
+#readyPanel.visible {
+  display: flex;
+}
+@keyframes readyGlow {
+  0%,100% { box-shadow: 4px 4px 0 #7a5800, 0 0 16px rgba(255,224,102,0.15); }
+  50%      { box-shadow: 4px 4px 0 #7a5800, 0 0 40px rgba(255,224,102,0.45); }
+}
+.ready-msg {
+  font-size: clamp(10px, 1.4vw, 15px);
+  color: #ffe066;
+  letter-spacing: 0.1em;
+  line-height: 2;
+  text-shadow: 2px 2px 0 #7a5800;
+}
+.ready-sub {
+  font-size: clamp(8px, 1vw, 11px);
+  color: #88aaff;
+  letter-spacing: 0.18em;
+  line-height: 2;
+}
+.start-race-btn {
+  background: #ffe066;
+  color: #0a0a1a;
+  border: none;
+  border-radius: 4px;
+  font-family: 'NeoDunggeunmo', monospace;
+  font-size: clamp(11px, 1.6vw, 18px);
+  letter-spacing: 0.22em;
+  padding: 13px 36px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #7a5800;
+  transition: transform 0.1s, box-shadow 0.1s;
+  margin-top: 6px;
+}
+.start-race-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 4px 6px 0 #7a5800;
+  background: #fff5aa;
+}
+.start-race-btn:active {
+  transform: translateY(2px);
+  box-shadow: 2px 2px 0 #7a5800;
+}
 </style>
 </head>
 <body>
@@ -759,6 +821,13 @@ canvas.sprite {
     <div class="vote-log-list" id="voteLogList">
       <div class="vote-log-empty pixel-text">WAITING FOR VOTES...</div>
     </div>
+  </div>
+
+  <!-- READY PANEL — 6조 모두 투표 완료 시 표시 -->
+  <div id="readyPanel">
+    <div class="ready-msg pixel-text">✅ 모든 조의 베팅이 완료되었습니다.</div>
+    <div class="ready-sub pixel-text">— 지금 레이스를 시작할까요? —</div>
+    <button class="start-race-btn pixel-text" id="startRaceBtn">▶ 레이스 시작</button>
   </div>
 </div>
 
@@ -952,9 +1021,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     if (currentScreen === 'opening') {
       goToSelect();
-    } else if (currentScreen === 'screen-select') {
-      if (countdownInterval) clearInterval(countdownInterval);
-      goToRace();
+    } else if (currentScreen === 'screen-select' && isReady) {
+      goToRaceBegins();
     }
   }
 });
@@ -964,16 +1032,7 @@ document.getElementById('screen-opening').addEventListener('click', () => {
   if (currentScreen === 'opening') goToSelect();
 });
 
-// Character card click → go to race immediately
-document.getElementById('charGrid').addEventListener('click', (e) => {
-  const card = e.target.closest('.char-card');
-  if (card) {
-    if (countdownInterval) clearInterval(countdownInterval);
-    card.style.borderColor = '#ffe066';
-    card.style.background = '#2a2a5a';
-    setTimeout(() => goToRaceBegins(), 300);
-  }
-});
+// Character card click — removed: race now starts only via ▶ 레이스 시작 button
 
 /* ═══════════════════════════════════════════
    RACE BEGINS SCREEN
@@ -1031,6 +1090,7 @@ const VOTE_TARGET = 6;
 let firestoreUnsub = null;
 let currentVoteCount = 0;
 let currentRoundId = null;
+let isReady = false;
 let currentVoteMap = {}; // { "정환": ["3조","5조"], ... }
 let voteLogEntries = []; // [{ team, character, timestamp }, ...]
 
@@ -1170,9 +1230,10 @@ function initFirestore() {
               : `${count} / ${VOTE_TARGET} 팀 투표 완료`;
           }
 
-          // 6개 고유 팀이 모두 투표하면 자동 진행
-          if (count >= VOTE_TARGET && currentScreen === 'screen-select') {
-            setTimeout(() => goToRaceBegins(), 800);
+          // 6개 고유 팀이 모두 투표하면 READY 상태 (자동 진행 없음)
+          if (count >= VOTE_TARGET && !isReady && currentScreen === 'screen-select') {
+            isReady = true;
+            showReadyPanel();
           }
         },
         (err) => {
@@ -1236,6 +1297,19 @@ function updateVoteLog(entries) {
   });
   _prevLogLen = entries.length;
 }
+
+/* ═══════════════════════════════════════════
+   READY PANEL
+═══════════════════════════════════════════ */
+function showReadyPanel() {
+  const panel = document.getElementById('readyPanel');
+  if (panel) panel.classList.add('visible');
+}
+
+document.getElementById('startRaceBtn').addEventListener('click', () => {
+  if (!isReady) return;
+  goToRaceBegins();
+});
 
 // initFirestore는 startCountdown() 내부에서 호출됨
 // (Firebase SDK가 로드된 이후 보장)
