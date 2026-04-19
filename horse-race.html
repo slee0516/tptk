@@ -29,11 +29,158 @@ body {
   max-width: 1280px;
 }
 
+.canvas-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
 canvas {
   display: block;
   flex-shrink: 0;
   border-radius: 14px;
   box-shadow: 0 4px 40px rgba(0,0,0,0.7);
+}
+
+/* ════════════════════════════════════
+   RESULT BOARD (auto-shows below canvas)
+════════════════════════════════════ */
+#raceResultBoard {
+  width: 920px;
+  background: #080818;
+  border: 3px solid #ffe066;
+  border-radius: 10px;
+  box-shadow: 4px 4px 0 #7a5800, 0 0 32px rgba(255,224,102,0.18);
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  overflow: hidden;
+  display: none;
+}
+#raceResultBoard.visible {
+  display: block;
+  animation: boardSlideIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+@keyframes boardSlideIn {
+  from { transform: translateY(24px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+.board-header {
+  background: linear-gradient(90deg, #12123a, #0d0d28, #12123a);
+  border-bottom: 2px solid #2a2a5a;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.board-title {
+  font-size: 13px;
+  color: #ffe066;
+  text-shadow: 2px 2px 0 #7a5800;
+  letter-spacing: 0.25em;
+  animation: titleGlow 1.8s ease-in-out infinite;
+}
+@keyframes titleGlow {
+  0%,100% { color: #ffe066; }
+  50%      { color: #fff9cc; }
+}
+.board-loading {
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.2em;
+  padding: 24px;
+  text-align: center;
+}
+
+/* ── Top 3 Podium ── */
+.board-podium {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 2px solid #111128;
+}
+.podium-card {
+  padding: 16px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  border-right: 1px solid #111128;
+  position: relative;
+  animation: podiumPop 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+.podium-card:last-child { border-right: none; }
+.podium-card.rank-1 { background: rgba(255,224,102,0.06); }
+.podium-card.rank-2 { background: rgba(189,195,199,0.03); }
+.podium-card.rank-3 { background: rgba(205,127,50,0.03); }
+@keyframes podiumPop {
+  from { transform: scale(0.8) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);   opacity: 1; }
+}
+
+.podium-medal { font-size: 26px; line-height: 1; }
+.podium-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: bold; color: #fff;
+  border: 2px solid rgba(255,255,255,0.4);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.podium-name {
+  font-size: 10px; color: #dde; letter-spacing: 0.08em;
+}
+.podium-bets {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
+  min-height: 18px;
+}
+.podium-bet-tag {
+  background: #151535;
+  border: 1px solid #2a3a6a;
+  border-radius: 3px;
+  padding: 2px 7px;
+  font-size: 7px; color: #88b4d4;
+  animation: tagPop 0.3s ease-out both;
+}
+@keyframes tagPop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.podium-no-bet { font-size: 7px; color: #333; }
+
+/* ── 4th ~ 12th Grid ── */
+.board-rest {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.rest-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
+  border-right: 1px solid #0d0d20;
+  border-bottom: 1px solid #0d0d20;
+  animation: restSlide 0.3s ease-out both;
+}
+.rest-row:nth-child(3n) { border-right: none; }
+@keyframes restSlide {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.rest-rank { font-size: 7px; color: #445; min-width: 24px; text-align: right; flex-shrink: 0; }
+.rest-num {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 5.5px; font-weight: bold; color: #fff;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.rest-name { font-size: 7px; color: #99a; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rest-bets { display: flex; flex-wrap: wrap; gap: 2px; }
+.rest-bet-tag {
+  background: #0e0e28; border: 1px solid #1e1e44;
+  border-radius: 2px; padding: 1px 4px;
+  font-size: 5.5px; color: #557799;
 }
 
 /* ── 사이드바 ── */
@@ -110,9 +257,52 @@ h1 {
   border-radius: 6px;
   padding: 6px 10px;
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: opacity 0.2s;
+}
+
+.rank-row-main {
+  display: flex;
   align-items: center;
   gap: 8px;
-  transition: opacity 0.2s;
+}
+
+.horse-num-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62em;
+  font-weight: bold;
+  color: #fff;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+
+.bet-teams-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding-left: 30px;
+  font-size: 0.7em;
+  line-height: 1.4;
+}
+.bet-team-tag {
+  background: #162840;
+  border: 1px solid #2a4860;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #88b4d4;
+  white-space: nowrap;
+}
+.bet-teams-row.no-bet {
+  color: #3a4a5a;
+  padding-left: 30px;
 }
 .rank-row.done { opacity: 0.6; }
 
@@ -127,13 +317,6 @@ h1 {
 .rank-pos.gold   { color: #f1c40f; }
 .rank-pos.silver { color: #bdc3c7; }
 .rank-pos.bronze { color: #cd7f32; }
-
-.horse-dot {
-  width: 11px; height: 11px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  border: 1.5px solid rgba(255,255,255,0.3);
-}
 
 .horse-label {
   font-size: 0.84em;
@@ -186,161 +369,25 @@ h1 {
 }
 .row-animate { animation: rowIn 0.25s ease; }
 
-/* ════════════════════════════════════
-   RESULT OVERLAY
-════════════════════════════════════ */
-#resultOverlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.92);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-  font-family: 'Press Start 2P', 'Courier New', monospace;
-}
-#resultOverlay.visible { display: flex; }
-
-.result-box {
-  background: #0a0a1f;
-  border: 4px solid #ffe066;
-  box-shadow: 0 0 40px rgba(255,224,102,0.3), 8px 8px 0 #7a5800;
-  padding: 40px 48px;
-  max-width: 560px;
-  width: 90%;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  animation: resultPop 0.4s ease-out;
-}
-@keyframes resultPop {
-  0%   { transform: scale(0.7); opacity: 0; }
-  100% { transform: scale(1);   opacity: 1; }
-}
-
-.result-header {
-  font-size: clamp(14px, 3vw, 22px);
-  color: #ffe066;
-  text-shadow: 3px 3px 0 #b8860b;
-  letter-spacing: 0.2em;
-  animation: glowPulse 1.5s ease-in-out infinite;
-}
-@keyframes glowPulse {
-  0%,100% { color: #ffe066; }
-  50%      { color: #fff5aa; }
-}
-
-.result-divider { border: none; border-top: 2px solid #1a1a3a; }
-
-.result-horse-label {
-  font-size: clamp(7px, 1.5vw, 10px);
-  color: #555;
-  letter-spacing: 0.3em;
-}
-.result-horse-name {
-  font-size: clamp(18px, 4vw, 32px);
-  color: #fff;
-  text-shadow: 3px 3px 0 #333;
-  letter-spacing: 0.15em;
-  margin-top: 6px;
-  animation: nameFlash 0.6s ease-out;
-}
-@keyframes nameFlash {
-  0%   { transform: scale(1.3); color: #ffe066; }
-  100% { transform: scale(1);   color: #fff; }
-}
-.result-place-badge {
-  display: inline-block;
-  font-size: clamp(7px, 1.2vw, 10px);
-  color: #88aaff;
-  letter-spacing: 0.2em;
-  margin-top: 4px;
-}
-
-.result-bet-label {
-  font-size: clamp(7px, 1.5vw, 10px);
-  color: #555;
-  letter-spacing: 0.3em;
-}
-.result-bet-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 4px;
-}
-.bet-team {
-  background: #1a1a3a;
-  border: 2px solid #4444aa;
-  border-radius: 4px;
-  padding: 6px 14px;
-  font-size: clamp(10px, 2vw, 15px);
-  color: #aac4ff;
-  animation: teamPop 0.4s ease-out both;
-}
-@keyframes teamPop {
-  0%   { transform: scale(0.5); opacity: 0; }
-  70%  { transform: scale(1.1); }
-  100% { transform: scale(1);   opacity: 1; }
-}
-.result-no-bet {
-  font-size: clamp(7px, 1.2vw, 10px);
-  color: #555;
-  letter-spacing: 0.15em;
-  line-height: 2;
-}
-
-.reveal-btn {
-  padding: 14px 24px;
-  background: #1a1a3a;
-  border: 3px solid #ffe066;
-  border-radius: 4px;
-  color: #ffe066;
-  font-family: 'Press Start 2P', monospace;
-  font-size: clamp(9px, 1.5vw, 12px);
-  letter-spacing: 0.2em;
-  cursor: pointer;
-  transition: all 0.15s;
-  animation: btnGlow 1.5s ease-in-out infinite;
-  align-self: center;
-}
-@keyframes btnGlow {
-  0%,100% { box-shadow: 0 0 0 0 rgba(255,224,102,0.5); }
-  50%      { box-shadow: 0 0 0 10px rgba(255,224,102,0); }
-}
-.reveal-btn:hover  { background: #2a2a5a; }
-.reveal-btn:active { transform: scale(0.97); }
-
-.result-loading {
-  font-size: 10px;
-  color: #555;
-  letter-spacing: 0.15em;
-  animation: loadDots 1.2s steps(4,end) infinite;
-}
-@keyframes loadDots {
-  0%  { content: 'LOADING'; }
-  25% { opacity: 0.7; }
-  50% { opacity: 0.4; }
-  75% { opacity: 0.7; }
-}
 </style>
 </head>
 <body>
 
-<!-- ═══ RESULT OVERLAY ═══ -->
-<div id="resultOverlay">
-  <div class="result-box">
-    <div class="result-header">🏆 RACE RESULT</div>
-    <hr class="result-divider">
-    <div id="resultContent">
-      <div class="result-loading">LOADING RESULTS...</div>
+<div class="layout">
+  <div class="canvas-col">
+    <canvas id="canvas"></canvas>
+
+    <!-- 완주 후 자동 표시되는 결과 보드 -->
+    <div id="raceResultBoard">
+      <div class="board-header">
+        <span>🏇</span>
+        <div class="board-title">🏁 RACE RESULT 🏁</div>
+        <span>🏇</span>
+      </div>
+      <div id="boardPodium" class="board-podium"></div>
+      <div id="boardRest"   class="board-rest"></div>
     </div>
   </div>
-</div>
-
-<div class="layout">
-  <canvas id="canvas"></canvas>
 
   <div class="sidebar">
     <h1>🐎 무적의 야생마 🐎</h1>
@@ -402,11 +449,14 @@ let results   = [];
 let running   = false;
 let animId    = null;
 let frameCount = 0;
+let horsesVoteMap = {}; // { "정환": ["3조","5조"], ... }
+let voteListener  = null; // Firestore onSnapshot unsubscribe fn
 
 const canvas = document.getElementById('canvas');
 const ctx    = canvas.getContext('2d');
 canvas.width  = W;
 canvas.height = H;
+
 
 // ══════════════════════════════════════════
 //  Track path (rounded rectangle)
@@ -771,6 +821,7 @@ function renderPanel() {
 
   sorted.forEach((h, pos) => {
     const rank = h.finished ? h.rank : pos + 1;
+    const num  = h.id + 1;
 
     // Rank badge
     let badge;
@@ -781,7 +832,11 @@ function renderPanel() {
       badge = `<span class="rank-pos ${cls}">${rank}위</span>`;
     }
 
-    // Progress bar (only during race, hide when all done)
+    // Horse number badge (matches badge on canvas)
+    const numBg = h.finished && !allDone ? '#2a3a3a' : h.color;
+    const numBadge = `<span class="horse-num-badge" style="background:${numBg}">${num}</span>`;
+
+    // Progress bar (only during race)
     const pct = Math.min(100, Math.round(h.progress * 100));
     const pbar = allDone ? '' : `
       <div class="pbar-wrap">
@@ -790,12 +845,25 @@ function renderPanel() {
 
     const doneClass = h.finished && !allDone ? ' done' : '';
 
+    // Bet teams row (항상 표시 — 경기 중·종료 후 모두)
+    const charName = h.name.replace(' 말', '');
+    const teams = horsesVoteMap[charName] || [];
+    let betRow;
+    if (teams.length > 0) {
+      betRow = `<div class="bet-teams-row">${teams.map(t => `<span class="bet-team-tag">${t}</span>`).join('')}</div>`;
+    } else {
+      betRow = `<div class="bet-teams-row no-bet">—</div>`;
+    }
+
     html += `
       <div class="rank-row${doneClass}">
-        ${badge}
-        <div class="horse-dot" style="background:${h.color}"></div>
-        <div class="horse-label">${h.name}</div>
-        ${pbar}
+        <div class="rank-row-main">
+          ${badge}
+          ${numBadge}
+          <div class="horse-label">${h.name}</div>
+          ${pbar}
+        </div>
+        ${betRow}
       </div>`;
   });
 
@@ -849,7 +917,7 @@ function update() {
     document.getElementById('startBtn').textContent = '▶ RESTART';
     document.getElementById('statusMsg').textContent = '';
     renderPanel(); // final render
-    showRevealButton(); // 결과 공개 버튼 표시
+    setTimeout(showResultBoard, 700); // 완주 후 자동 결과 보드 표시
   }
 }
 
@@ -866,6 +934,9 @@ function loop() {
 function startRace() {
   if (animId) cancelAnimationFrame(animId);
   initHorses();
+  horsesVoteMap = {};
+  document.getElementById('raceResultBoard').classList.remove('visible'); // 보드 숨김
+  startVoteListener(); // 실시간 베팅 정보 구독 시작
 
   document.getElementById('panel').innerHTML  = '<p class="waiting-msg">레이스 시작!</p>';
   document.getElementById('startBtn').disabled    = true;
@@ -899,127 +970,108 @@ function getCurrentRoundId() {
   return params.get('roundId') || localStorage.getItem('currentRoundId') || null;
 }
 
-/* ── 레이스 종료 시 결과 공개 버튼 ── */
-function showRevealButton() {
-  const panel = document.getElementById('panel');
-  const btn = document.createElement('button');
-  btn.className = 'reveal-btn pixel-text';
-  btn.textContent = '🏆 BETTING RESULT 공개';
-  btn.style.marginTop = '16px';
-  btn.onclick = () => {
-    btn.remove();
-    fetchVotesAndReveal();
-  };
-  panel.appendChild(btn);
-}
-
-/* ── Firestore 투표 조회 & 결과 화면 ── */
-async function fetchVotesAndReveal() {
-  const overlay = document.getElementById('resultOverlay');
-  const content = document.getElementById('resultContent');
-  overlay.classList.add('visible');
-  content.innerHTML = '<div class="result-loading">LOADING RESULTS...</div>';
-
+/* ── 레이스 시작 시 실시간 베팅 정보 구독 ── */
+function startVoteListener() {
+  if (voteListener) { voteListener(); voteListener = null; }
   const roundId = getCurrentRoundId();
-
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     const db = firebase.firestore();
-
-    // 투표 데이터 조회 (roundId 있으면 필터, 없으면 전체)
     let query = db.collection('votes');
     if (roundId) query = query.where('roundId', '==', roundId);
-    const snapshot = await query.get();
-
-    // 투표 맵 빌드: { "정환": ["3조","5조"], ... }
-    const voteMap = {};
-    snapshot.docs.forEach(doc => {
-      const d = doc.data();
-      if (!d.character || !d.team) return;
-      if (!voteMap[d.character]) voteMap[d.character] = [];
-      if (!voteMap[d.character].includes(d.team)) {
-        voteMap[d.character].push(d.team);
-      }
-    });
-
-    // 순위 배열: results[0] = 1등 말 객체
-    // HORSE_NAMES = ['정환 말', '장우 말', ...] → character = '정환'
-    const raceOrder = results.map(h => ({
-      name: h.name,                          // "정환 말"
-      charName: h.name.replace(' 말', ''),   // "정환"
-      rank: h.rank
-    }));
-
-    // 알고리즘: 1등부터 순서대로 베팅 팀이 있는 말 찾기
-    let winnerEntry = null;
-    for (const entry of raceOrder) {
-      const teams = voteMap[entry.charName] || [];
-      if (teams.length > 0) {
-        winnerEntry = { ...entry, teams };
-        break;
-      }
-    }
-
-    renderResultContent(winnerEntry, raceOrder[0]);
-
-  } catch (e) {
-    console.error('Result fetch error:', e);
-    content.innerHTML = `
-      <div class="result-horse-label">ERROR</div>
-      <div class="result-no-bet" style="color:#ef4444">
-        결과를 불러오지 못했습니다<br>${e.message}
-      </div>`;
+    voteListener = query.onSnapshot(snapshot => {
+      const map = {};
+      snapshot.docs.forEach(doc => {
+        const d = doc.data();
+        if (!d.character || !d.team) return;
+        if (!map[d.character]) map[d.character] = [];
+        if (!map[d.character].includes(d.team)) map[d.character].push(d.team);
+      });
+      horsesVoteMap = map;
+      // renderPanel은 다음 프레임 update()에서 자동 반영됨
+    }, err => console.error('Vote listener error:', err));
+  } catch(e) {
+    console.error('Vote listener init error:', e);
   }
 }
 
-/* ── 결과 화면 렌더링 ── */
-function renderResultContent(winnerEntry, firstPlace) {
-  const content = document.getElementById('resultContent');
-  const medals  = ['🥇','🥈','🥉'];
-  const ordinal = ['1ST','2ND','3RD','4TH','5TH','6TH','7TH','8TH','9TH','10TH','11TH','12TH'];
+/* ── 완주 후 결과 보드 자동 표시 ── */
+function showResultBoard() {
+  const board = document.getElementById('raceResultBoard');
+  board.classList.add('visible');
 
-  if (!winnerEntry) {
-    // 아무도 베팅 안 한 경우
-    content.innerHTML = `
-      <div class="result-horse-label">1ST PLACE</div>
-      <div class="result-horse-name">${firstPlace.charName}</div>
-      <div class="result-bet-label" style="margin-top:16px">BET BY</div>
-      <div class="result-no-bet">이 라운드에서 베팅한 팀이 없습니다 😢</div>`;
-    return;
+  // 이미 horsesVoteMap에 데이터가 있으면 바로 렌더링
+  // 없으면 Firestore에서 한 번 더 조회
+  if (Object.keys(horsesVoteMap).length > 0) {
+    renderResultBoard(horsesVoteMap);
+  } else {
+    document.getElementById('boardPodium').innerHTML =
+      '<div class="board-loading" style="grid-column:1/-1">✨ LOADING RESULTS...</div>';
+    fetchAndRenderBoard();
   }
+}
 
-  const placeIdx  = winnerEntry.rank - 1;
-  const medal     = medals[placeIdx] || '🏅';
-  const placeText = ordinal[placeIdx] || (winnerEntry.rank + 'TH');
-  const isFirst   = winnerEntry.rank === 1;
-
-  let html = '';
-
-  if (!isFirst) {
-    html += `<div class="result-no-bet">1등에 베팅한 팀이 없어<br>${placeText} PLACE로 이동</div>
-             <hr class="result-divider">`;
+async function fetchAndRenderBoard() {
+  const roundId = getCurrentRoundId();
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.firestore();
+    let q = db.collection('votes');
+    if (roundId) q = q.where('roundId', '==', roundId);
+    const snap = await q.get();
+    const map = {};
+    snap.docs.forEach(doc => {
+      const d = doc.data();
+      if (!d.character || !d.team) return;
+      if (!map[d.character]) map[d.character] = [];
+      if (!map[d.character].includes(d.team)) map[d.character].push(d.team);
+    });
+    horsesVoteMap = map;
+    renderResultBoard(map);
+  } catch(e) {
+    console.error('Board fetch error:', e);
+    document.getElementById('boardPodium').innerHTML =
+      '<div class="board-loading" style="color:#ef4444;grid-column:1/-1">⚠️ 데이터 로드 실패</div>';
   }
+}
 
-  html += `
-    <div class="result-horse-label">${isFirst ? 'WINNING HORSE' : 'TOP BETTED HORSE'}</div>
-    <div class="result-horse-name">${medal} ${winnerEntry.charName}</div>
-    <div class="result-place-badge">${placeText} PLACE</div>
-    <hr class="result-divider">
-    <div class="result-bet-label">BET BY</div>
-    <div class="result-bet-list">
-      ${winnerEntry.teams.map((t, i) =>
-        `<div class="bet-team pixel-text" style="animation-delay:${i*0.15}s">${t}</div>`
-      ).join('')}
-    </div>`;
+function renderResultBoard(voteMap) {
+  const medals   = ['🥇','🥈','🥉'];
+  const podiumCls = ['rank-1','rank-2','rank-3'];
+  const top3 = results.slice(0, 3);
+  const rest  = results.slice(3);
 
-  content.innerHTML = html;
+  // ── Top 3 Podium ──
+  document.getElementById('boardPodium').innerHTML = top3.map((h, i) => {
+    const charName = h.name.replace(' 말', '');
+    const teams    = voteMap[charName] || [];
+    const betsHtml = teams.length > 0
+      ? teams.map((t, j) =>
+          `<span class="podium-bet-tag" style="animation-delay:${0.3 + i*0.12 + j*0.07}s">${t}</span>`
+        ).join('')
+      : `<span class="podium-no-bet">— NO BETS —</span>`;
+    return `
+      <div class="podium-card ${podiumCls[i]}" style="animation-delay:${i*0.12}s">
+        <div class="podium-medal">${medals[i]}</div>
+        <div class="podium-num" style="background:${h.color}">${h.id + 1}</div>
+        <div class="podium-name">${h.name}</div>
+        <div class="podium-bets">${betsHtml}</div>
+      </div>`;
+  }).join('');
 
-  // 오버레이 클릭으로 닫기
-  document.getElementById('resultOverlay').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('resultOverlay')) {
-      document.getElementById('resultOverlay').classList.remove('visible');
-    }
-  });
+  // ── 4th ~ 12th ──
+  document.getElementById('boardRest').innerHTML = rest.map((h, i) => {
+    const charName = h.name.replace(' 말', '');
+    const teams    = voteMap[charName] || [];
+    const betsHtml = teams.map(t => `<span class="rest-bet-tag">${t}</span>`).join('');
+    return `
+      <div class="rest-row" style="animation-delay:${0.4 + i*0.05}s">
+        <span class="rest-rank">${h.rank}위</span>
+        <div class="rest-num" style="background:${h.color}">${h.id + 1}</div>
+        <span class="rest-name">${h.name}</span>
+        <div class="rest-bets">${betsHtml || '<span class="rest-bet-tag" style="color:#333">—</span>'}</div>
+      </div>`;
+  }).join('');
 }
 </script>
 </body>

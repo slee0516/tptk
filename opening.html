@@ -366,8 +366,10 @@ body::after {
 
 .countdown-text {
   font-size: clamp(7px, 1vw, 11px);
-  color: #ff6b35;
+  color: #88aaff;
   letter-spacing: 0.08em;
+  text-align: center;
+  line-height: 1.8;
 }
 
 /* ════════════════════════════
@@ -789,7 +791,7 @@ const CHARACTERS = [
   { name: '소연', color: '#e879f9', skinTone: '#f9c48a' },
 ];
 
-const AUTO_ADVANCE_SECONDS = 60;
+// 투표 완료 기준: 6개 조(팀) 모두 참여
 
 /* ═══════════════════════════════════════════
    STARS BACKGROUND
@@ -930,34 +932,17 @@ function goToRace() {
 let countdownInterval = null;
 
 async function startCountdown() {
-  let remaining = AUTO_ADVANCE_SECONDS;
   const bar = document.getElementById('timerBar');
   const txt = document.getElementById('countdown');
+
+  // 진행 바 초기화 (0%부터 시작 — 투표 수에 따라 채워짐)
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  txt.textContent = `0 / ${VOTE_TARGET} 팀 투표 완료`;
 
   // 새 라운드 생성 후 Firestore 리스너 시작
   await createNewRound();
   initFirestore();
-
-  // Start full, shrink to 0
-  bar.style.transition = 'none';
-  bar.style.width = '100%';
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      bar.style.transition = `width ${AUTO_ADVANCE_SECONDS}s linear`;
-      bar.style.width = '0%';
-    });
-  });
-
-  txt.textContent = `AUTO: ${remaining}s`;
-
-  countdownInterval = setInterval(() => {
-    remaining--;
-    txt.textContent = `AUTO: ${remaining}s`;
-    if (remaining <= 0) {
-      clearInterval(countdownInterval);
-      goToRace();
-    }
-  }, 1000);
 }
 
 /* ═══════════════════════════════════════════
@@ -1143,12 +1128,14 @@ function initFirestore() {
         (snapshot) => {
           setFirebaseStatus('connected');
 
-          // 투표 맵 & 로그 빌드
+          // 투표 맵 & 로그 빌드 + 고유 팀 집계
           const newMap = {};
           const newLog = [];
+          const uniqueTeams = new Set();
           snapshot.docs.forEach(doc => {
             const d = doc.data();
             if (!d.character || !d.team) return;
+            uniqueTeams.add(d.team);
             if (!newMap[d.character]) newMap[d.character] = [];
             if (!newMap[d.character].includes(d.team)) {
               newMap[d.character].push(d.team);
@@ -1164,11 +1151,26 @@ function initFirestore() {
           currentVoteMap = newMap;
           voteLogEntries = newLog;
 
-          const count = Math.min(snapshot.size, VOTE_TARGET);
-          updateVoteUI(count);
+          // 고유 팀 수 기준으로 카운트
+          const count = uniqueTeams.size;
+          updateVoteUI(Math.min(count, VOTE_TARGET));
           updateCharCards(newMap);
           updateVoteLog(newLog.slice(0, 6));
 
+          // 진행 바 & 텍스트 업데이트
+          const bar = document.getElementById('timerBar');
+          const txt = document.getElementById('countdown');
+          if (bar) {
+            bar.style.transition = 'width 0.35s ease';
+            bar.style.width = `${Math.min(100, (count / VOTE_TARGET) * 100)}%`;
+          }
+          if (txt) {
+            txt.textContent = count >= VOTE_TARGET
+              ? '✅ ALL TEAMS VOTED! ▶'
+              : `${count} / ${VOTE_TARGET} 팀 투표 완료`;
+          }
+
+          // 6개 고유 팀이 모두 투표하면 자동 진행
           if (count >= VOTE_TARGET && currentScreen === 'screen-select') {
             setTimeout(() => goToRaceBegins(), 800);
           }
