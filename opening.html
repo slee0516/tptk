@@ -730,7 +730,7 @@ canvas.sprite {
 
   <!-- Horse silhouette SVG -->
   <div class="horse-silhouette">
-    <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+    <div class = "speech-bubble pixel-text"> 무야조 파이팅 </div>    <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
       <!-- pixel-art horse built from rectangles -->
       <!-- body -->
       <rect x="20" y="28" width="56" height="24" fill="#2a2a2a"/>
@@ -1315,5 +1315,51 @@ document.getElementById('startRaceBtn').addEventListener('click', () => {
 // (Firebase SDK가 로드된 이후 보장)
 </script>
 
+<style>
+  /* ── OPENING HORSE SPEECH BUBBLE ── */
+  .horse-silhouette {
+    position: absolute;
+  }
+  
+  .speech-bubble {
+    position: absolute;
+    bottom: 90px;           /* 말 위 */
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffff;
+    color: #222;
+    font-size: 12px;
+    padding: 6px 10px;
+    border: 2px solid #333;
+    border-radius: 6px;
+    white-space: nowrap;
+    image-rendering: pixelated;
+    box-shadow: 2px 2px 0 #333;
+    letter-spacing: 0.05em;
+  
+    animation: bubblePop 1.2s ease-in-out infinite;
+  }
+  
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    background: #ffffff;
+    border-left: 2px solid #333;
+    border-bottom: 2px solid #333;
+    transform: translateX(-50%) rotate(45deg);
+  }
+  
+  @keyframes bubblePop {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-2px); }
+  }
+  </style>
+  
 </body>
 </html>
+
+
