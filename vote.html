@@ -552,17 +552,39 @@ function setRoundStatus(state, msg) {
   });
 })();
 
-function selectTeam(name, cardEl) {
+async function selectTeam(name, cardEl) {
   document.querySelectorAll('.team-card.selected').forEach(c => c.classList.remove('selected'));
   cardEl.classList.add('selected');
   teamName = name;
 
   const nextBtn = document.getElementById('nextBtn');
+  const errEl   = document.getElementById('teamError');
+  nextBtn.disabled = true;
+  nextBtn.classList.remove('ready');
+  nextBtn.textContent = '확인 중...';
+  errEl.textContent = '';
+
+  if (db && currentRoundId) {
+    try {
+      const snap = await db.collection(VOTES_COLLECTION)
+        .where('roundId', '==', currentRoundId)
+        .where('team',    '==', name)
+        .get();
+      if (!snap.empty) {
+        errEl.textContent = '이미 해당 팀에 투표했습니다.';
+        cardEl.classList.remove('selected');
+        teamName = '';
+        nextBtn.textContent = 'SELECT YOUR TEAM';
+        return;
+      }
+    } catch (e) {
+      console.warn('Duplicate check error:', e);
+    }
+  }
+
   nextBtn.disabled = false;
   nextBtn.classList.add('ready');
   nextBtn.textContent = `▶ ${name} 선택 완료`;
-
-  document.getElementById('teamError').textContent = '';
 }
 
 /* ══════════════════════════════════════
@@ -807,6 +829,15 @@ submitBtn.addEventListener('click', async () => {
   showState('submitting');
 
   try {
+    const dupSnap = await db.collection(VOTES_COLLECTION)
+      .where('roundId', '==', currentRoundId)
+      .where('team',    '==', teamName)
+      .get();
+    if (!dupSnap.empty) {
+      showError('이미 해당 팀에 투표했습니다.');
+      return;
+    }
+
     await db.collection(VOTES_COLLECTION).add({
       team:      teamName,
       character: selectedCharacter,

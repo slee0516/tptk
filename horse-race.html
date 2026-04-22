@@ -44,41 +44,49 @@ canvas {
 }
 
 /* ════════════════════════════════════
-   RESULT BOARD (auto-shows below canvas)
+   RESULT BOARD - FULL SCREEN OVERLAY
 ════════════════════════════════════ */
 #raceResultBoard {
-  width: 920px;
-  background: #080818;
-  border: 3px solid #ffe066;
-  border-radius: 10px;
-  box-shadow: 4px 4px 0 #7a5800, 0 0 32px rgba(255,224,102,0.18);
-  font-family: 'NeoDunggeunmo', monospace;
-  overflow: hidden;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: radial-gradient(ellipse at 50% 0%, #1c1a48 0%, #06071a 55%);
+  z-index: 9999;
   display: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: 'NeoDunggeunmo', monospace;
 }
 #raceResultBoard.visible {
-  display: block;
-  animation: boardSlideIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: boardFadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-@keyframes boardSlideIn {
-  from { transform: translateY(24px) scale(0.97); opacity: 0; }
-  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+@keyframes boardFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes confettiFall {
+  to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
 
 .board-header {
-  background: linear-gradient(90deg, #12123a, #0d0d28, #12123a);
-  border-bottom: 2px solid #2a2a5a;
-  padding: 10px 20px;
+  width: 100%;
+  background: linear-gradient(180deg, #14143e 0%, #0a0a20 100%);
+  border-bottom: 2px solid #ffe066;
+  padding: 22px 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 20px;
+  flex-shrink: 0;
 }
 .board-title {
-  font-size: 13px;
+  font-size: 22px;
   color: #ffe066;
-  text-shadow: 2px 2px 0 #7a5800;
-  letter-spacing: 0.25em;
+  text-shadow: 2px 2px 0 #7a5800, 0 0 24px rgba(255,224,102,0.4);
+  letter-spacing: 0.3em;
   animation: titleGlow 1.8s ease-in-out infinite;
 }
 @keyframes titleGlow {
@@ -97,90 +105,97 @@ canvas {
 .board-podium {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  border-bottom: 2px solid #111128;
+  width: 100%;
+  max-width: 1100px;
+  padding: 32px 24px 20px;
+  gap: 20px;
 }
 .podium-card {
-  padding: 16px 12px 14px;
+  padding: 28px 18px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
-  border-right: 1px solid #111128;
+  gap: 12px;
+  border-radius: 18px;
+  border: 2px solid transparent;
   position: relative;
   animation: podiumPop 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
-.podium-card:last-child { border-right: none; }
-.podium-card.rank-1 { background: rgba(255,224,102,0.06); }
-.podium-card.rank-2 { background: rgba(189,195,199,0.03); }
-.podium-card.rank-3 { background: rgba(205,127,50,0.03); }
+.podium-card.rank-1 { background: rgba(255,224,102,0.10); border-color: rgba(255,224,102,0.45); box-shadow: 0 0 48px rgba(255,224,102,0.14); }
+.podium-card.rank-2 { background: rgba(189,195,199,0.06); border-color: rgba(189,195,199,0.30); }
+.podium-card.rank-3 { background: rgba(205,127,50,0.06);  border-color: rgba(205,127,50,0.30); }
 @keyframes podiumPop {
   from { transform: scale(0.8) translateY(8px); opacity: 0; }
   to   { transform: scale(1)   translateY(0);   opacity: 1; }
 }
 
-.podium-medal { font-size: 26px; line-height: 1; }
+.podium-medal { font-size: 52px; line-height: 1; }
 .podium-num {
-  width: 24px; height: 24px;
+  width: 60px; height: 60px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 8px; font-weight: bold; color: #fff;
-  border: 2px solid rgba(255,255,255,0.4);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  font-size: 20px; font-weight: bold; color: #fff;
+  border: 3px solid rgba(255,255,255,0.5);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
 }
 .podium-name {
-  font-size: 10px; color: #dde; letter-spacing: 0.08em;
+  font-size: 18px; color: #ffffff; letter-spacing: 0.1em;
 }
 .podium-bets {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
-  min-height: 18px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  min-height: 28px;
 }
 .podium-bet-tag {
   background: #151535;
   border: 1px solid #2a3a6a;
-  border-radius: 3px;
-  padding: 2px 7px;
-  font-size: 7px; color: #88b4d4;
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: 11px; color: #88b4d4;
   animation: tagPop 0.3s ease-out both;
 }
 @keyframes tagPop {
   from { transform: scale(0.6); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
 }
-.podium-no-bet { font-size: 7px; color: #333; }
+.podium-no-bet { font-size: 11px; color: #333; }
 
 /* ── 4th ~ 12th Grid ── */
 .board-rest {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  width: 100%;
+  max-width: 1100px;
+  padding: 0 24px 48px;
+  gap: 10px;
 }
 .rest-row {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 12px;
-  border-right: 1px solid #0d0d20;
-  border-bottom: 1px solid #0d0d20;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: #0d0d22;
+  border: 1px solid #1a1a38;
+  border-radius: 10px;
   animation: restSlide 0.3s ease-out both;
 }
-.rest-row:nth-child(3n) { border-right: none; }
 @keyframes restSlide {
   from { opacity: 0; transform: translateX(-6px); }
   to   { opacity: 1; transform: translateX(0); }
 }
-.rest-rank { font-size: 7px; color: #445; min-width: 24px; text-align: right; flex-shrink: 0; }
+.rest-rank { font-size: 11px; color: #5566aa; min-width: 32px; text-align: right; flex-shrink: 0; }
 .rest-num {
-  width: 15px; height: 15px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 5.5px; font-weight: bold; color: #fff;
+  font-size: 8px; font-weight: bold; color: #fff;
   flex-shrink: 0;
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1.5px solid rgba(255,255,255,0.35);
 }
-.rest-name { font-size: 7px; color: #99a; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rest-bets { display: flex; flex-wrap: wrap; gap: 2px; }
+.rest-name { font-size: 11px; color: #aabb; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rest-bets { display: flex; flex-wrap: wrap; gap: 3px; }
 .rest-bet-tag {
   background: #0e0e28; border: 1px solid #1e1e44;
-  border-radius: 2px; padding: 1px 4px;
-  font-size: 5.5px; color: #557799;
+  border-radius: 3px; padding: 2px 6px;
+  font-size: 8px; color: #557799;
 }
 
 /* ── 사이드바 ── */
@@ -1004,10 +1019,35 @@ function startVoteListener() {
   }
 }
 
+/* ── 컨페티 효과 ── */
+function spawnConfetti() {
+  const colors = ['#ffe066','#ff6b6b','#51cf66','#74c0fc','#ff94d2','#ffd43b','#a9e34b','#cc5de8'];
+  for (let i = 0; i < 80; i++) {
+    const el = document.createElement('div');
+    const size = 6 + Math.random() * 9;
+    el.style.cssText = [
+      'position:fixed',
+      'top:-20px',
+      `left:${Math.random() * 100}vw`,
+      `width:${size}px`,
+      `height:${size}px`,
+      `background:${colors[Math.floor(Math.random() * colors.length)]}`,
+      `border-radius:${Math.random() > 0.5 ? '50%' : '3px'}`,
+      'z-index:10000',
+      'pointer-events:none',
+      `animation:confettiFall ${1.4 + Math.random() * 2}s ease-in ${Math.random() * 1.8}s forwards`,
+      `transform:rotate(${Math.random() * 360}deg)`
+    ].join(';');
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+}
+
 /* ── 완주 후 결과 보드 자동 표시 ── */
 function showResultBoard() {
   const board = document.getElementById('raceResultBoard');
   board.classList.add('visible');
+  spawnConfetti();
 
   // 이미 horsesVoteMap에 데이터가 있으면 바로 렌더링
   // 없으면 Firestore에서 한 번 더 조회
