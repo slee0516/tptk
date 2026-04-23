@@ -450,6 +450,9 @@ const HORSE_NAMES = [
   '수연 말','나현 말','승균 말','소연 말'
 ];
 
+// 승훈 말 인덱스 (HORSE_NAMES 배열 기준)
+const SEUNGHOON_IDX = 5;
+
 const COLORS = [
   '#FF2233', // 0  정환 — 스칼렛 레드
   '#1A237E', // 1  장우 — 남색
@@ -905,6 +908,13 @@ function renderPanel() {
 // ══════════════════════════════════════════
 function update() {
   let newFinish = false;
+  const sh = horses[SEUNGHOON_IDX];
+
+  // 프레임 시작 시점의 다른 말 최대 진행도 스냅샷 (보정 계산용)
+  const activeOthers = horses.filter((h, i) => i !== SEUNGHOON_IDX && !h.finished);
+  const othersMax = activeOthers.length > 0
+    ? Math.max(...activeOthers.map(h => h.progress)) : 0;
+  const shLead = sh.finished ? 1 : sh.progress - othersMax; // 양수 = 승훈이 앞서는 격차
 
   for (const h of horses) {
     if (h.finished) continue;
@@ -913,14 +923,49 @@ function update() {
     const noise   = (Math.random() - 0.32) * 0.0018;
     const burst   = Math.random() < 0.04  ? Math.random() * 0.003  : 0;
     const stumble = Math.random() < 0.025 ? -(0.0004 + Math.random() * 0.0005) : 0;
-    const speed   = Math.max(0.00008, base + noise + burst + stumble);
+    let   speed   = Math.max(0.00008, base + noise + burst + stumble);
 
-    const prev    = h.progress;
-    h.progress    = Math.min(1, h.progress + speed);
+    if (h.id === SEUNGHOON_IDX) {
+      // ── 승훈 말 확률 가중치 + 프레임 단위 보정 ──────────────────
+      const p = sh.progress;
+
+      if (p < 0.55) {
+        // 초반: 미세 우위 — 자연스럽게 앞서기 시작
+        speed *= (1.03 + Math.random() * 0.04);
+
+      } else if (p < 0.82) {
+        // 중반: 격차 기반 동적 조정 (접전 연출)
+        if      (shLead < -0.01) speed *= 1.18;  // 뒤처지면 추격 가속
+        else if (shLead < 0.02)  speed *= 1.07;  // 박빙 접전 유지
+        else if (shLead > 0.05)  speed *= 0.97;  // 너무 앞서면 페이스 조절(극적 효과)
+        else                     speed *= 1.04;
+
+      } else {
+        // 후반(0.82~): 강한 보정으로 1위 확정
+        if      (shLead < -0.01) speed *= 1.52;  // 역전 추격 — 극적 역전
+        else if (shLead < 0.01)  speed *= 1.30;  // 막상막하 → 치고 나가기
+        else if (shLead < 0.03)  speed *= 1.15;
+        else                     speed *= 1.07;
+      }
+
+    } else if (!sh.finished) {
+      // ── 다른 말: 승훈이 완주하기 전 결승선 차단 ─────────────────
+      // 결승선 직전 제동 — 승훈보다 먼저 완주 불가
+      if (h.progress + speed >= 1.0) {
+        speed = Math.max(0, 0.9990 - h.progress);
+      }
+
+      // 후반에 승훈보다 앞서 있으면 미세 감속 (자연스러운 피로 연출)
+      if (h.progress > 0.82 && h.progress > sh.progress + 0.02) {
+        speed *= (0.88 + Math.random() * 0.08);
+      }
+    }
+
+    h.progress  = Math.min(1, h.progress + speed);
 
     // Smooth speed & advance leg animation phase (faster speed = faster stride)
-    h.lastSpeed  = h.lastSpeed * 0.85 + speed * 0.15;
-    h.animPhase  = (h.animPhase + h.lastSpeed * 520) % (Math.PI * 2);
+    h.lastSpeed = h.lastSpeed * 0.85 + speed * 0.15;
+    h.animPhase = (h.animPhase + h.lastSpeed * 520) % (Math.PI * 2);
 
     if (h.progress >= 1 && !h.finished) {
       h.finished = true;
